@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: LEGO Controller",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "servers/main.py",
+            "console": "integratedTerminal",
+            "sudo": true
+        },
+        {
+            "name": "Python: Web Service",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": ["webservice.train_service:app", "--reload"],
+            "console": "integratedTerminal"
+        }
+    ]
+}

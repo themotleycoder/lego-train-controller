@@ -1,0 +1,4 @@
+bleak
+msgpack
+fastapi
+uvicorn
