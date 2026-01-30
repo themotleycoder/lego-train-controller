@@ -231,15 +231,15 @@ class SwitchController:
                                         'connected': True,
                                         'timestamp': current_time,
                                         'name': device.name,
-                                        'rssi': device.rssi
+                                        'rssi': advertisement_data.rssi
                                     }
 
                                     self.switch_statuses[hub_id] = status_data.copy()
                                     self.last_status = status_data.copy()
                                     self.last_update_times[hub_id] = current_time
-                                    
+
                                     print(f"\nStatus update from {device.name}:")
-                                    print(f"RSSI: {device.rssi} dBm")
+                                    print(f"RSSI: {advertisement_data.rssi} dBm")
                                     print(f"Switch positions: {switch_positions}")
                                     print(f"Connected ports: {switch_states}")
                             

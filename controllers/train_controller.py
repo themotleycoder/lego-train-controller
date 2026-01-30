@@ -81,7 +81,7 @@ class TrainController:
                                     'timestamp': current_time,
                                     'name': device.name,
                                     'selfDrive': self._train_self_drive.get(hub_id, False),
-                                    'rssi': device.rssi,
+                                    'rssi': advertisement_data.rssi,
                                     'channel': listening_channel
                                 }
                                 self.last_update_times[hub_id] = current_time

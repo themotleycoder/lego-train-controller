@@ -1,172 +1,538 @@
 #!/usr/bin/env python3
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from typing import Optional
+"""
+LEGO Train Controller REST API Service.
+
+Provides HTTP endpoints for controlling LEGO trains and switches via Bluetooth.
+Implements security, logging, and health monitoring.
+"""
 import asyncio
+import logging
 import time
+from typing import Dict, Optional
+
+from fastapi import FastAPI, HTTPException, Depends, Request, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field, validator
+
+from config import get_settings
+from middleware.auth import api_key_header, verify_api_key
 from servers.main import LegoController
+from utils.logging_config import setup_logging, get_logger
 
-app = FastAPI()
+# Initialize logging
+setup_logging()
+logger = get_logger(__name__)
 
-# Add CORS middleware
+# Initialize settings
+settings = get_settings()
+
+# Create FastAPI app with metadata
+app = FastAPI(
+    title="LEGO Train Controller API",
+    description="REST API for controlling LEGO Powered Up trains and switches via Bluetooth",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+# Add CORS middleware with configured origins
+logger.info(f"Configuring CORS with allowed origins: {settings.allowed_origins_list}")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust this in production
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["X-Request-ID"],
 )
 
 # Initialize controller
 controller = LegoController()
 
+# Request counter for tracking
+request_counter = 0
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Middleware to log all HTTP requests with timing."""
+    global request_counter
+    request_counter += 1
+    request_id = f"req-{request_counter}"
+
+    start_time = time.time()
+    logger.info(
+        f"Request started: {request.method} {request.url.path}",
+        extra={
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "client": request.client.host if request.client else "unknown"
+        }
+    )
+
+    response = await call_next(request)
+
+    duration = time.time() - start_time
+    logger.info(
+        f"Request completed: {request.method} {request.url.path} - {response.status_code}",
+        extra={
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "duration_ms": round(duration * 1000, 2)
+        }
+    )
+
+    return response
+
+
 @app.on_event("startup")
 async def startup_event():
-    """Initialize the controller when the FastAPI app starts"""
-    print("Starting up FastAPI server...")
-    await controller.initialize()
-    
-    # Start monitoring in background task
-    controller.running = True
-    asyncio.create_task(controller.train_controller.start_status_monitoring())
-    asyncio.create_task(controller.switch_controller.start_status_monitoring())
+    """Initialize the controller when the FastAPI app starts."""
+    logger.info("Starting up LEGO Train Controller API service")
+    logger.info(f"Authentication {'enabled' if settings.require_auth else 'disabled'}")
+    logger.info(f"Bluetooth reset on startup: {settings.bluetooth_reset_on_startup}")
+
+    try:
+        await controller.initialize()
+        logger.info("Controller initialized successfully")
+
+        # Start monitoring in background tasks
+        controller.running = True
+        asyncio.create_task(controller.train_controller.start_status_monitoring())
+        asyncio.create_task(controller.switch_controller.start_status_monitoring())
+        logger.info("Background monitoring tasks started")
+
+    except Exception as e:
+        logger.error(f"Failed to initialize controller: {e}", exc_info=True)
+        raise
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Cleanup when server shuts down"""
-    print("Shutting down server...")
-    controller.running = False
-    await controller.train_controller.stop_status_monitoring()
-    await asyncio.sleep(1)  # Give time for cleanup
+    """Cleanup when server shuts down."""
+    logger.info("Shutting down LEGO Train Controller API service")
+    try:
+        controller.running = False
+        await controller.train_controller.stop_status_monitoring()
+        await asyncio.sleep(1)  # Give time for cleanup
+        logger.info("Shutdown completed successfully")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}", exc_info=True)
 
-async def run_single_monitor():
-    """Run a single monitoring instance"""
-    while True:
-        try:
-            print("Starting monitoring...")
-            # Start only the train monitoring (since it uses the same BLE scanner)
-            await controller.train_controller.start_status_monitoring()
-            await controller.switch_controller.start_status_monitoring()
-        except Exception as e:
-            print(f"Monitor error: {e}")
-            # Wait before retrying
-            await asyncio.sleep(5)
-
-class TrainCommand(BaseModel):
-    hub_id: int = 0
-    command: str
-    power: Optional[int] = 40
-
-class SwitchCommand(BaseModel):
-    hub_id: int = 0
-    switch: str  # "A" or "B"
-    position: str  # "STRAIGHT" or "DIVERGING"
+# ===========================================
+# Pydantic Models with Validation
+# ===========================================
 
 class TrainPowerCommand(BaseModel):
-    hub_id: int
-    power: int = Field(..., ge=-100, le=100)  # Ensures power is between -100 and 100
+    """Command to control train motor power."""
+    hub_id: int = Field(..., ge=0, description="Hub ID of the train")
+    power: int = Field(..., ge=-100, le=100, description="Motor power from -100 to 100")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "hub_id": 12,
+                "power": 50
+            }
+        }
+
 
 class TrainDriveCommand(BaseModel):
-    hub_id: int
-    self_drive: int   # self drive is 1, manual drive is 0    
+    """Command to toggle train self-drive mode."""
+    hub_id: int = Field(..., ge=0, description="Hub ID of the train")
+    self_drive: int = Field(..., ge=0, le=1, description="Self-drive mode: 1=enabled, 0=disabled")
 
-@app.post("/selfdrive")
-async def control_train(command: TrainDriveCommand):
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "hub_id": 12,
+                "self_drive": 1
+            }
+        }
+
+
+class SwitchCommand(BaseModel):
+    """Command to control track switch position."""
+    hub_id: int = Field(..., ge=0, description="Hub ID of the switch controller")
+    switch: str = Field(..., description="Switch name (A, B, C, or D)")
+    position: str = Field(..., description="Switch position (STRAIGHT or DIVERGING)")
+
+    @validator("switch")
+    def validate_switch_name(cls, v):
+        """Validate switch name is A-D."""
+        if v.upper() not in settings.valid_switch_names_list:
+            raise ValueError(f"Switch must be one of {settings.valid_switch_names_list}")
+        return v.upper()
+
+    @validator("position")
+    def validate_position(cls, v):
+        """Validate position is STRAIGHT or DIVERGING."""
+        if v.upper() not in settings.valid_switch_positions_list:
+            raise ValueError(f"Position must be one of {settings.valid_switch_positions_list}")
+        return v.upper()
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "hub_id": 1,
+                "switch": "A",
+                "position": "DIVERGING"
+            }
+        }
+
+
+class HealthResponse(BaseModel):
+    """Health check response model."""
+    status: str = Field(..., description="Service status (healthy/degraded/unhealthy)")
+    timestamp: float = Field(..., description="Current Unix timestamp")
+    version: str = Field(..., description="API version")
+    bluetooth_available: bool = Field(..., description="Bluetooth adapter availability")
+    connected_trains: int = Field(..., description="Number of connected trains")
+    connected_switches: int = Field(..., description="Number of connected switches")
+    authentication_enabled: bool = Field(..., description="Whether API key auth is enabled")    
+
+# ===========================================
+# Health Check Endpoint (No auth required)
+# ===========================================
+
+@app.get(
+    "/health",
+    response_model=HealthResponse,
+    tags=["Monitoring"],
+    summary="Health check endpoint",
+    description="Check service health and availability. No authentication required."
+)
+async def health_check():
+    """
+    Health check endpoint for monitoring.
+
+    Returns service status, connected devices, and system health.
+    Does not require authentication.
+    """
     try:
-        await controller.train_controller.handle_drive_command(command.hub_id, command.self_drive)
-        return {"status": "success"}
+        # Check Bluetooth availability
+        bluetooth_available = True
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["hciconfig", "hci0"],
+                capture_output=True,
+                timeout=2
+            )
+            bluetooth_available = result.returncode == 0
+        except Exception as e:
+            logger.warning(f"Bluetooth health check failed: {e}")
+            bluetooth_available = False
+
+        # Get connected device counts
+        connected_trains = len(controller.train_controller.get_connected_trains())
+        connected_switches = len(controller.switch_controller.get_connected_switches())
+
+        # Determine overall status
+        if not bluetooth_available:
+            status_str = "unhealthy"
+        elif connected_trains == 0 and connected_switches == 0:
+            status_str = "healthy"  # No devices but service is operational
+        else:
+            status_str = "healthy"
+
+        return HealthResponse(
+            status=status_str,
+            timestamp=time.time(),
+            version="1.0.0",
+            bluetooth_available=bluetooth_available,
+            connected_trains=connected_trains,
+            connected_switches=connected_switches,
+            authentication_enabled=settings.require_auth
+        )
+
+    except Exception as e:
+        logger.error(f"Health check failed: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "status": "unhealthy",
+                "timestamp": time.time(),
+                "error": str(e)
+            }
+        )
+
+
+# ===========================================
+# Train Control Endpoints (Auth required)
+# ===========================================
+
+@app.post(
+    "/selfdrive",
+    tags=["Train Control"],
+    summary="Toggle train self-drive mode",
+    description="Enable or disable autonomous self-drive mode for a train"
+)
+async def control_train_drive(
+    command: TrainDriveCommand,
+    api_key: str = Depends(api_key_header)
+):
+    """Toggle train self-drive mode."""
+    await verify_api_key(api_key)
+
+    try:
+        logger.info(
+            f"Self-drive command received: hub_id={command.hub_id}, self_drive={command.self_drive}"
+        )
+        await controller.train_controller.handle_drive_command(
+            command.hub_id,
+            command.self_drive
+        )
+        logger.info(f"Self-drive command successful for train {command.hub_id}")
+        return {"status": "success", "hub_id": command.hub_id, "self_drive": command.self_drive}
+
     except ValueError as e:
+        logger.warning(f"Invalid self-drive command: {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        logger.error(f"Self-drive command failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/train")
-async def control_train(command: TrainPowerCommand):
+@app.post(
+    "/train",
+    tags=["Train Control"],
+    summary="Control train power",
+    description="Set the motor power for a train (-100 to 100)"
+)
+async def control_train_power(
+    command: TrainPowerCommand,
+    api_key: str = Depends(api_key_header)
+):
+    """Control train motor power."""
+    await verify_api_key(api_key)
+
     try:
+        logger.info(f"Power command received: hub_id={command.hub_id}, power={command.power}")
         await controller.train_controller.handle_command(command.hub_id, command.power)
-        return {"status": "success"}
+        logger.info(f"Power command successful for train {command.hub_id}")
+        return {"status": "success", "hub_id": command.hub_id, "power": command.power}
+
     except ValueError as e:
+        logger.warning(f"Invalid power command: {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        logger.error(f"Power command failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
     
-@app.post("/switch")
-async def control_switch(command: SwitchCommand):
+# ===========================================
+# Switch Control Endpoints (Auth required)
+# ===========================================
+
+@app.post(
+    "/switch",
+    tags=["Switch Control"],
+    summary="Control track switch",
+    description="Set the position of a track switch (STRAIGHT or DIVERGING)"
+)
+async def control_switch(
+    command: SwitchCommand,
+    api_key: str = Depends(api_key_header)
+):
+    """Control track switch position."""
+    await verify_api_key(api_key)
+
     try:
-        # Convert switch letter to number (1-4 for A-D)
-        switch_num = ord(command.switch) - ord('A') + 1
-        # Create command value: XYYY where X is switch number and YYY includes position
+        logger.info(
+            f"Switch command received: hub_id={command.hub_id}, "
+            f"switch={command.switch}, position={command.position}"
+        )
+
+        # Convert position to numeric value
         position = 1 if command.position == "DIVERGING" else 0
-        
+
         # Send the command to the switch controller
-        await controller.switch_controller.send_command_with_retry(
+        success = await controller.switch_controller.send_command_with_retry(
             command.hub_id,
             f"SWITCH_{command.switch}",  # Keep the SWITCH_ prefix for compatibility
             position
         )
-        return {"status": "success"}
+
+        if success:
+            logger.info(
+                f"Switch command successful: {command.switch} -> {command.position}"
+            )
+            return {
+                "status": "success",
+                "hub_id": command.hub_id,
+                "switch": command.switch,
+                "position": command.position
+            }
+        else:
+            logger.warning(f"Switch command failed after retries: {command.switch}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Failed to control switch after multiple attempts"
+            )
+
+    except ValueError as e:
+        logger.warning(f"Invalid switch command: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        logger.error(f"Switch command failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/connected/trains")
-async def get_connected_trains():
+# ===========================================
+# Device Status Endpoints (Auth required)
+# ===========================================
+
+@app.get(
+    "/connected/trains",
+    tags=["Device Status"],
+    summary="Get connected trains",
+    description="Retrieve status information for all connected train hubs"
+)
+async def get_connected_trains(api_key: str = Depends(api_key_header)):
+    """Get information about all connected train hubs."""
+    await verify_api_key(api_key)
+
     try:
-        # Add error handling for controller access
+        # Check controller initialization
         if not controller or not controller.train_controller:
+            logger.error("Train controller not initialized")
             raise HTTPException(
                 status_code=503,
                 detail="Train controller not initialized"
             )
-            
+
         connected_trains = controller.train_controller.get_connected_trains()
-        
+        logger.debug(f"Retrieved {len(connected_trains)} connected trains")
+
         return {
             "connected_trains": len(connected_trains),
-            "trains": connected_trains
+            "trains": connected_trains,
+            "timestamp": time.time()
         }
+
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error in get_connected_trains endpoint: {e}")
+        logger.error(f"Error retrieving connected trains: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail=f"Internal server error: {str(e)}"
         )
     
-@app.get("/connected/switches", 
-    description="Get information about all connected switch hubs",
-    response_description="""Returns a dictionary with:
-    - connected_switches: Number of connected switch hubs
-    - switches: Dictionary of switch hub data, where each hub contains:
-        - switch_positions: Current position of each switch (0=STRAIGHT, 1=DIVERGING)
-        - last_update_seconds_ago: Time since last status update
-        - name: Hub name
-        - status: Raw status byte
-        - connected: Connection status
-        - active: Whether hub is currently active
-        - port_connections: Binary representation of connected motor ports
-    """
+@app.get(
+    "/connected/switches",
+    tags=["Device Status"],
+    summary="Get connected switches",
+    description="Retrieve status information for all connected switch hubs"
 )
-async def get_connected_switches():
+async def get_connected_switches(api_key: str = Depends(api_key_header)):
+    """
+    Get information about all connected switch hubs.
+
+    Returns:
+        - connected_switches: Number of connected switch hubs
+        - switches: Dictionary of switch hub data with positions and reliability stats
+    """
+    await verify_api_key(api_key)
+
     try:
         connected_switches = controller.switch_controller.get_connected_switches()
-        
+        logger.debug(f"Retrieved {len(connected_switches)} connected switches")
+
         return {
             "connected_switches": len(connected_switches),
-            "switches": connected_switches
+            "switches": connected_switches,
+            "timestamp": time.time()
         }
+
     except Exception as e:
-        print(f"Error checking switch connections: {e}")
+        logger.error(f"Error retrieving connected switches: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/reset")
-async def reset_bluetooth():
+# ===========================================
+# System Control Endpoints (Auth required)
+# ===========================================
+
+@app.post(
+    "/reset",
+    tags=["System Control"],
+    summary="Reset Bluetooth adapter",
+    description="Reset the Bluetooth adapter to clear connection issues"
+)
+async def reset_bluetooth(api_key: str = Depends(api_key_header)):
+    """
+    Reset Bluetooth adapter.
+
+    Use this endpoint if devices are not connecting or responding properly.
+    This will restart the Bluetooth radio.
+    """
+    await verify_api_key(api_key)
+
     try:
-        controller.switch_controller.scanner.reset_bluetooth()
+        logger.warning("Bluetooth reset requested")
+        await controller.switch_controller.scanner.reset_bluetooth()
         controller.train_controller.reset_bluetooth()
-        return {"status": "success"}
+        logger.info("Bluetooth reset completed successfully")
+
+        return {
+            "status": "success",
+            "message": "Bluetooth adapter reset successfully",
+            "timestamp": time.time()
+        }
+
     except Exception as e:
+        logger.error(f"Bluetooth reset failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ===========================================
+# Exception Handlers
+# ===========================================
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Custom HTTP exception handler with logging."""
+    logger.warning(
+        f"HTTP {exc.status_code}: {exc.detail}",
+        extra={"path": request.url.path, "method": request.method}
+    )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail, "timestamp": time.time()}
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """General exception handler for unhandled errors."""
+    logger.error(
+        f"Unhandled exception: {exc}",
+        exc_info=True,
+        extra={"path": request.url.path, "method": request.method}
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal server error",
+            "message": str(exc),
+            "timestamp": time.time()
+        }
+    )
+
+
+# ===========================================
+# Main Entry Point
+# ===========================================
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+    logger.info(f"Starting server on {settings.host}:{settings.port}")
+    uvicorn.run(
+        app,
+        host=settings.host,
+        port=settings.port,
+        log_level=settings.log_level.lower()
+    )
