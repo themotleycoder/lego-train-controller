@@ -45,37 +45,45 @@ sudo PYTHONPATH=/path/to/lego-train-controller uvicorn webservice.train_service:
 
 ### As a System Service
 
-To run as a system service (recommended for production):
+To run as a system service (recommended for production), see **[SYSTEMD_SERVICE_SETUP.md](SYSTEMD_SERVICE_SETUP.md)** for a comprehensive guide.
 
-1. Copy the example service file, customize it for your environment, and install it:
+Quick setup:
+
+1. Create the service file:
    ```bash
-   # Copy the example file
-   cp lego-controller.service_example lego-controller.service
-   
-   # Edit the file to update paths and settings
-   nano lego-controller.service
-   
-   # Copy to systemd
-   sudo cp lego-controller.service /etc/systemd/system/
+   sudo nano /etc/systemd/system/lego-controller.service
    ```
 
-2. Reload systemd daemon:
+2. Add the configuration (update paths to match your installation):
+   ```ini
+   [Unit]
+   Description=LEGO Train and Switch Controller Service
+   After=network.target bluetooth.target
+   Requires=bluetooth.service
+
+   [Service]
+   Type=simple
+   User=pi
+   Group=bluetooth
+   WorkingDirectory=/home/pi/lego-train-controller
+   Environment="PYTHONPATH=/home/pi/lego-train-controller"
+   ExecStart=/home/pi/lego-train-controller/.venv/bin/uvicorn webservice.train_service:app --host 0.0.0.0 --port 8000
+   Restart=always
+   RestartSec=10
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+3. Enable and start:
    ```bash
    sudo systemctl daemon-reload
-   ```
-
-3. Enable the service to start on boot:
-   ```bash
    sudo systemctl enable lego-controller
-   ```
-
-4. Control the service:
-   ```bash
-   sudo systemctl start lego-controller    # Start the service
-   sudo systemctl stop lego-controller     # Stop the service
-   sudo systemctl restart lego-controller  # Restart the service
+   sudo systemctl start lego-controller
    sudo systemctl status lego-controller   # Check service status
    ```
+
+See [SYSTEMD_SERVICE_SETUP.md](SYSTEMD_SERVICE_SETUP.md) for troubleshooting, log management, and advanced configuration.
 
 ## Web Service API Endpoints
 

@@ -1,19 +1,23 @@
 [Unit]
-Description=Lego Train and Switch Controller Service
-After=bluetooth.service
+Description=LEGO Train and Switch Controller Service
+After=network.target bluetooth.target
 Requires=bluetooth.service
 
 [Service]
 Type=simple
-User=jm
+# Update User to match your username (usually 'pi' on Raspberry Pi)
+User=pi
 Group=bluetooth
-WorkingDirectory=[project path]
-Environment=PYTHONPATH=[project path]
-ExecStart=[project path]/.venv/bin/uvicorn webservice.train_service:app --host 0.0.0.0 --port 8000
+# Update WorkingDirectory to your project installation path
+WorkingDirectory=/home/pi/lego-train-controller
+# Update PYTHONPATH to match WorkingDirectory
+Environment="PYTHONPATH=/home/pi/lego-train-controller"
+# Update ExecStart path to match your virtual environment location
+ExecStart=/home/pi/lego-train-controller/.venv/bin/uvicorn webservice.train_service:app --host 0.0.0.0 --port 8000
 StandardOutput=append:/var/log/lego-controller.log
 StandardError=append:/var/log/lego-controller.error.log
 Restart=always
 RestartSec=10
-x
+
 [Install]
 WantedBy=multi-user.target
