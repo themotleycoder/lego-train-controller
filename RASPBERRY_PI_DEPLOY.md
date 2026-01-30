@@ -19,10 +19,10 @@ Deploy the authenticated LEGO Train Controller service to your Raspberry Pi and 
 
 1. **Copy API Key** from `.env` file:
    ```bash
-   grep API_KEYS /Users/jm/src/lego_trains/lego-train-controller/.env
+   grep API_KEYS .env
    ```
 
-   Copy this value: `BiHD1W2boepGwXO9ZkiNYj3Il2kCugjiT1V11k6iBjE`
+   You'll need this value for the Raspberry Pi and Flutter app configuration.
 
 2. **Get Raspberry Pi IP Address**
    - You'll need this for the Flutter app configuration
@@ -87,7 +87,7 @@ HOST=0.0.0.0
 PORT=8000
 
 # API Authentication
-API_KEYS=BiHD1W2boepGwXO9ZkiNYj3Il2kCugjiT1V11k6iBjE
+API_KEYS=your-api-key-here
 REQUIRE_AUTH=true
 
 # CORS Configuration
@@ -151,7 +151,7 @@ nano ~/src/lego_trains/legocontroller/.env
 **Update with Raspberry Pi IP:**
 ```bash
 BACKEND_URL=http://192.168.86.39:8000
-API_KEY=BiHD1W2boepGwXO9ZkiNYj3Il2kCugjiT1V11k6iBjE
+API_KEY=your-api-key-here
 REQUEST_TIMEOUT_SECONDS=5
 POLL_INTERVAL_SECONDS=1
 ```
@@ -194,7 +194,7 @@ curl -X GET http://192.168.86.39:8000/connected/trains
 
 # Should SUCCEED with API key
 curl -X GET http://192.168.86.39:8000/connected/trains \
-  -H "X-API-Key: BiHD1W2boepGwXO9ZkiNYj3Il2kCugjiT1V11k6iBjE"
+  -H "X-API-Key: your-api-key-here"
 ```
 
 ### 3. Test Train Control
@@ -202,7 +202,7 @@ curl -X GET http://192.168.86.39:8000/connected/trains \
 ```bash
 curl -X POST http://192.168.86.39:8000/train \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: BiHD1W2boepGwXO9ZkiNYj3Il2kCugjiT1V11k6iBjE" \
+  -H "X-API-Key: your-api-key-here" \
   -d '{"hub_id": 101, "power": 30}'
 ```
 
@@ -353,7 +353,7 @@ sudo journalctl -u lego-train.service -f
 
 ```bash
 curl -s http://localhost:8000/connected/trains \
-  -H "X-API-Key: BiHD1W2boepGwXO9ZkiNYj3Il2kCugjiT1V11k6iBjE" \
+  -H "X-API-Key: your-api-key-here" \
   | python3 -m json.tool
 ```
 
@@ -422,12 +422,12 @@ curl http://192.168.86.39:8000/health
 
 # Get trains
 curl http://192.168.86.39:8000/connected/trains \
-  -H "X-API-Key: BiHD1W2boepGwXO9ZkiNYj3Il2kCugjiT1V11k6iBjE"
+  -H "X-API-Key: your-api-key-here"
 
 # Control train
 curl -X POST http://192.168.86.39:8000/train \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: BiHD1W2boepGwXO9ZkiNYj3Il2kCugjiT1V11k6iBjE" \
+  -H "X-API-Key: your-api-key-here" \
   -d '{"hub_id": 101, "power": 50}'
 ```
 
