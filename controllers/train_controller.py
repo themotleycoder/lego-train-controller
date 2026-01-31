@@ -3,6 +3,9 @@ import subprocess
 import time
 import struct
 from servers.bluetooth_scanner import BetterBleScanner
+from utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 class TrainController:
     def __init__(self):
@@ -21,7 +24,7 @@ class TrainController:
     def register_train(self, hub_id: int, command_channel: int):
         """Register a train and its command channel"""
         self.train_channels[hub_id] = command_channel
-        print(f"Registered train {hub_id} on command channel {command_channel}")
+        logger.info(f"Registered train {hub_id} on command channel {command_channel}")
 
     def get_train_channel(self, hub_id: int) -> int:
         """Get the command channel for a specific train"""
@@ -61,7 +64,7 @@ class TrainController:
                             
                             # Auto-register using listening channel
                             if hub_id not in self.train_channels:
-                                print(f"Auto-registering train {hub_id} using channel {listening_channel}")
+                                logger.info(f"Auto-registering train {hub_id} using channel {listening_channel}")
                                 self.register_train(hub_id, listening_channel)
                             
                             current_time = time.time()
@@ -85,33 +88,33 @@ class TrainController:
                                     'channel': listening_channel
                                 }
                                 self.last_update_times[hub_id] = current_time
-                                print(f"Updated status for train {hub_id}: {self.train_statuses[hub_id]}")
+                                logger.debug(f"Updated status for train {hub_id}: {self.train_statuses[hub_id]}")
                         
                         except Exception as e:
-                            print(f"Error processing hub data: {e}")
+                            logger.error(f"Error processing hub data: {e}", exc_info=True)
                             import traceback
                             traceback.print_exc()
 
             except Exception as e:
-                print(f"Error in status callback: {e}")
+                logger.error(f"Error in status callback: {e}", exc_info=True)
                 import traceback
                 traceback.print_exc()
 
-        print("\nStarting train status monitoring...")
+        logger.info("Starting train status monitoring...")
         self.command_task = asyncio.create_task(self._process_commands())
         
         while self.running:
             try:
-                print("Setting up scanner...")
+                logger.debug("Setting up scanner...")
                 await self.scanner.start_scan(status_callback)
-                print("Scanner started, waiting for events...")
+                logger.debug("Scanner started, waiting for events...")
                 
                 while self.running:
                     await asyncio.sleep(0.05)  # Reduced sleep time for better responsiveness
                     
             except Exception as e:
-                print(f"Error in monitor loop: {e}")
-                print("Waiting before retry...")
+                logger.error(f"Error in monitor loop: {e}", exc_info=True)
+                logger.info("Waiting before retry...")
                 await asyncio.sleep(1)  # Reduced retry delay
             finally:
                 await self.scanner.stop_scan()
@@ -140,7 +143,7 @@ class TrainController:
                 await asyncio.sleep(0.02)
 
             except Exception as e:
-                print(f"Error processing command batch: {e}")
+                logger.error(f"Error processing command batch: {e}", exc_info=True)
 
     async def _execute_command(self, command):
         """Execute a single command"""
@@ -191,7 +194,7 @@ class TrainController:
                 await asyncio.sleep(0.1)
 
         except Exception as e:
-            print(f"Error executing command: {e}")
+            logger.error(f"Error executing command: {e}", exc_info=True)
             raise
 
     async def handle_command(self, hub_id: int, power: int):
@@ -201,7 +204,7 @@ class TrainController:
                 available_trains = list(self.train_statuses.keys())
                 raise ValueError(f"Train {hub_id} not found. Available trains: {available_trains}")
 
-            print(f"Setting train {hub_id} power to: {power}%")
+            logger.info(f"Setting train {hub_id} power to: {power}%")
             self.mark_train_active(hub_id)
             # Encode power commands as values from -100 to 100
             clamped_power = max(min(power, 100), -100)
@@ -211,7 +214,7 @@ class TrainController:
             asyncio.create_task(self._mark_inactive_later(hub_id))
             
         except Exception as e:
-            print(f"Error queueing train command: {e}")
+            logger.error(f"Error queueing train command: {e}", exc_info=True)
             import traceback
             traceback.print_exc()
             raise
@@ -223,7 +226,7 @@ class TrainController:
                 available_trains = list(self.train_statuses.keys())
                 raise ValueError(f"Train {hub_id} not found. Available trains: {available_trains}")
 
-            print(f"Setting train {hub_id} self drive to: {self_drive}")
+            logger.info(f"Setting train {hub_id} self drive to: {self_drive}")
             self.mark_train_active(hub_id)
             # Update self-drive state in our tracking dictionary
             self._train_self_drive[hub_id] = bool(self_drive)
@@ -235,7 +238,7 @@ class TrainController:
             asyncio.create_task(self._mark_inactive_later(hub_id))
             
         except Exception as e:
-            print(f"Error queueing train command: {e}")
+            logger.error(f"Error queueing train command: {e}", exc_info=True)
             import traceback
             traceback.print_exc()
             raise
@@ -264,17 +267,17 @@ class TrainController:
                             'active': hub_id in self._active_trains  # Include active status
                         }
                 except Exception as e:
-                    print(f"Error processing train {hub_id}: {e}")
+                    logger.error(f"Error processing train {hub_id}: {e}", exc_info=True)
                     continue
             
             return connected_trains
         except Exception as e:
-            print(f"Error in get_connected_trains: {e}")
+            logger.error(f"Error in get_connected_trains: {e}", exc_info=True)
             return {}
 
     async def stop_status_monitoring(self):
         """Stop monitoring for status updates"""
-        print("Stopping train status monitoring...")
+        logger.info("Stopping train status monitoring...")
         self.running = False
         await self.scanner.stop_scan()
-        print("Train monitor stopped")
+        logger.info("Train monitor stopped")

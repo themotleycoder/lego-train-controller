@@ -13,17 +13,17 @@ Complete guide for setting up the LEGO Train Controller as a systemd service tha
 
 ```bash
 # 1. Create the service file
-sudo nano /etc/systemd/system/lego-controller.service
+sudo nano /etc/systemd/system/lego-bluetooth-controller.service
 
 # 2. Paste the configuration (see below)
 
 # 3. Enable and start
 sudo systemctl daemon-reload
-sudo systemctl enable lego-controller
-sudo systemctl start lego-controller
+sudo systemctl enable lego-bluetooth-controller
+sudo systemctl start lego-bluetooth-controller
 
 # 4. Check status
-sudo systemctl status lego-controller
+sudo systemctl status lego-bluetooth-controller
 ```
 
 ---
@@ -36,7 +36,7 @@ Before creating the service, verify your installation is working:
 
 ```bash
 # Navigate to project directory
-cd ~/lego-train-controller
+cd ~/lego-bluetooth-controller
 
 # Activate virtual environment
 source .venv/bin/activate
@@ -52,7 +52,7 @@ Press Ctrl+C to stop the test. If it works, proceed to the next step.
 Create the service configuration file:
 
 ```bash
-sudo nano /etc/systemd/system/lego-controller.service
+sudo nano /etc/systemd/system/lego-bluetooth-controller.service
 ```
 
 Paste the following configuration, **replacing the paths with your actual installation directory**:
@@ -67,11 +67,11 @@ Requires=bluetooth.service
 Type=simple
 User=pi
 Group=bluetooth
-WorkingDirectory=/home/pi/lego-train-controller
-Environment="PYTHONPATH=/home/pi/lego-train-controller"
-ExecStart=/home/pi/lego-train-controller/.venv/bin/uvicorn webservice.train_service:app --host 0.0.0.0 --port 8000
-StandardOutput=append:/var/log/lego-controller.log
-StandardError=append:/var/log/lego-controller.error.log
+WorkingDirectory=/home/pi/lego-bluetooth-controller
+Environment="PYTHONPATH=/home/pi/lego-bluetooth-controller"
+ExecStart=/home/pi/lego-bluetooth-controller/.venv/bin/uvicorn webservice.train_service:app --host 0.0.0.0 --port 8000
+StandardOutput=append:/var/log/lego-bluetooth-controller.log
+StandardError=append:/var/log/lego-bluetooth-controller.error.log
 Restart=always
 RestartSec=10
 
@@ -95,16 +95,16 @@ Save the file (Ctrl+X, Y, Enter).
 
 ```bash
 # Create log files
-sudo touch /var/log/lego-controller.log
-sudo touch /var/log/lego-controller.error.log
+sudo touch /var/log/lego-bluetooth-controller.log
+sudo touch /var/log/lego-bluetooth-controller.error.log
 
 # Set ownership to your user
-sudo chown pi:pi /var/log/lego-controller.log
-sudo chown pi:pi /var/log/lego-controller.error.log
+sudo chown pi:pi /var/log/lego-bluetooth-controller.log
+sudo chown pi:pi /var/log/lego-bluetooth-controller.error.log
 
 # Set permissions
-sudo chmod 644 /var/log/lego-controller.log
-sudo chmod 644 /var/log/lego-controller.error.log
+sudo chmod 644 /var/log/lego-bluetooth-controller.log
+sudo chmod 644 /var/log/lego-bluetooth-controller.error.log
 ```
 
 ### Step 4: Enable and Start the Service
@@ -114,26 +114,26 @@ sudo chmod 644 /var/log/lego-controller.error.log
 sudo systemctl daemon-reload
 
 # Enable the service to start on boot
-sudo systemctl enable lego-controller
+sudo systemctl enable lego-bluetooth-controller
 
 # Start the service now
-sudo systemctl start lego-controller
+sudo systemctl start lego-bluetooth-controller
 
 # Check the status
-sudo systemctl status lego-controller
+sudo systemctl status lego-bluetooth-controller
 ```
 
 **Expected Output:**
 ```
-● lego-controller.service - LEGO Train and Switch Controller Service
-     Loaded: loaded (/etc/systemd/system/lego-controller.service; enabled; vendor preset: enabled)
+● lego-bluetooth-controller.service - LEGO Train and Switch Controller Service
+     Loaded: loaded (/etc/systemd/system/lego-bluetooth-controller.service; enabled; vendor preset: enabled)
      Active: active (running) since Thu 2026-01-30 10:00:00 GMT; 5s ago
    Main PID: 1234 (uvicorn)
       Tasks: 2 (limit: 1234)
      Memory: 50.0M
         CPU: 1.234s
-     CGroup: /system.slice/lego-controller.service
-             └─1234 /home/pi/lego-train-controller/.venv/bin/python3 /home/pi/lego-train-controller/.venv/bin/uvicorn...
+     CGroup: /system.slice/lego-bluetooth-controller.service
+             └─1234 /home/pi/lego-bluetooth-controller/.venv/bin/python3 /home/pi/lego-bluetooth-controller/.venv/bin/uvicorn...
 ```
 
 If you see `Active: active (running)`, the service is working correctly!
@@ -158,39 +158,39 @@ curl -H "X-API-Key: your-api-key-here" http://localhost:8000/connected/trains
 
 ```bash
 # Start the service
-sudo systemctl start lego-controller
+sudo systemctl start lego-bluetooth-controller
 
 # Stop the service
-sudo systemctl stop lego-controller
+sudo systemctl stop lego-bluetooth-controller
 
 # Restart the service
-sudo systemctl restart lego-controller
+sudo systemctl restart lego-bluetooth-controller
 
 # Check service status
-sudo systemctl status lego-controller
+sudo systemctl status lego-bluetooth-controller
 
 # Enable service to start on boot
-sudo systemctl enable lego-controller
+sudo systemctl enable lego-bluetooth-controller
 
 # Disable service from starting on boot
-sudo systemctl disable lego-controller
+sudo systemctl disable lego-bluetooth-controller
 ```
 
 ### Viewing Logs
 
 ```bash
 # View service logs from systemd journal
-sudo journalctl -u lego-controller -f
+sudo journalctl -u lego-bluetooth-controller -f
 
 # View last 50 lines
-sudo journalctl -u lego-controller -n 50
+sudo journalctl -u lego-bluetooth-controller -n 50
 
 # View logs since last boot
-sudo journalctl -u lego-controller -b
+sudo journalctl -u lego-bluetooth-controller -b
 
 # View application logs directly
-tail -f /var/log/lego-controller.log
-tail -f /var/log/lego-controller.error.log
+tail -f /var/log/lego-bluetooth-controller.log
+tail -f /var/log/lego-bluetooth-controller.error.log
 ```
 
 ---
@@ -202,7 +202,7 @@ When you update your code or configuration:
 ### 1. Update Code
 
 ```bash
-cd ~/lego-train-controller
+cd ~/lego-bluetooth-controller
 git pull origin main  # Or your preferred method
 
 # Update dependencies if needed
@@ -214,22 +214,22 @@ pip install -r requirements.txt
 
 ```bash
 # Just restart the service - no need to reload systemd
-sudo systemctl restart lego-controller
+sudo systemctl restart lego-bluetooth-controller
 
 # Check that it started successfully
-sudo systemctl status lego-controller
+sudo systemctl status lego-bluetooth-controller
 ```
 
 ### 3. If Service File Changed
 
-If you modified the service file in `/etc/systemd/system/lego-controller.service`:
+If you modified the service file in `/etc/systemd/system/lego-bluetooth-controller.service`:
 
 ```bash
 # Reload systemd configuration
 sudo systemctl daemon-reload
 
 # Restart the service
-sudo systemctl restart lego-controller
+sudo systemctl restart lego-bluetooth-controller
 ```
 
 ---
@@ -240,14 +240,14 @@ sudo systemctl restart lego-controller
 
 **Check the status:**
 ```bash
-sudo systemctl status lego-controller
+sudo systemctl status lego-bluetooth-controller
 ```
 
 **Common issues:**
 
 1. **Wrong paths in service file**
-   - Verify `WorkingDirectory` exists: `ls /home/pi/lego-train-controller`
-   - Verify virtual environment exists: `ls /home/pi/lego-train-controller/.venv/bin/uvicorn`
+   - Verify `WorkingDirectory` exists: `ls /home/pi/lego-bluetooth-controller`
+   - Verify virtual environment exists: `ls /home/pi/lego-bluetooth-controller/.venv/bin/uvicorn`
 
 2. **Permission issues**
    - Ensure user `pi` can access the directory
@@ -255,7 +255,7 @@ sudo systemctl status lego-controller
 
 3. **Missing dependencies**
    ```bash
-   cd ~/lego-train-controller
+   cd ~/lego-bluetooth-controller
    source .venv/bin/activate
    pip install -r requirements.txt
    ```
@@ -268,8 +268,8 @@ sudo systemctl status lego-controller
 
 **View detailed logs:**
 ```bash
-sudo journalctl -u lego-controller -n 100
-tail -n 100 /var/log/lego-controller.error.log
+sudo journalctl -u lego-bluetooth-controller -n 100
+tail -n 100 /var/log/lego-bluetooth-controller.error.log
 ```
 
 **Common causes:**
@@ -295,7 +295,7 @@ groups pi
 sudo usermod -a -G bluetooth pi
 
 # Restart service
-sudo systemctl restart lego-controller
+sudo systemctl restart lego-bluetooth-controller
 ```
 
 **Check passwordless sudo for Bluetooth:**
@@ -312,28 +312,28 @@ sudo chmod 0440 /etc/sudoers.d/bluetooth
 
 **Check log file permissions:**
 ```bash
-ls -l /var/log/lego-controller*
+ls -l /var/log/lego-bluetooth-controller*
 
 # Fix if needed
-sudo chown pi:pi /var/log/lego-controller.log
-sudo chown pi:pi /var/log/lego-controller.error.log
+sudo chown pi:pi /var/log/lego-bluetooth-controller.log
+sudo chown pi:pi /var/log/lego-bluetooth-controller.error.log
 ```
 
 ### Service Not Starting on Boot
 
 **Check if service is enabled:**
 ```bash
-sudo systemctl is-enabled lego-controller
+sudo systemctl is-enabled lego-bluetooth-controller
 ```
 
 Should return `enabled`. If not:
 ```bash
-sudo systemctl enable lego-controller
+sudo systemctl enable lego-bluetooth-controller
 ```
 
 **Check boot logs:**
 ```bash
-sudo journalctl -u lego-controller -b
+sudo journalctl -u lego-bluetooth-controller -b
 ```
 
 ---
@@ -344,18 +344,18 @@ sudo journalctl -u lego-controller -b
 
 Edit the service file:
 ```bash
-sudo nano /etc/systemd/system/lego-controller.service
+sudo nano /etc/systemd/system/lego-bluetooth-controller.service
 ```
 
 Change the ExecStart line:
 ```ini
-ExecStart=/home/pi/lego-train-controller/.venv/bin/uvicorn webservice.train_service:app --host 0.0.0.0 --port 8080
+ExecStart=/home/pi/lego-bluetooth-controller/.venv/bin/uvicorn webservice.train_service:app --host 0.0.0.0 --port 8080
 ```
 
 Then reload and restart:
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl restart lego-controller
+sudo systemctl restart lego-bluetooth-controller
 ```
 
 ### Custom Environment Variables
@@ -364,7 +364,7 @@ Add environment variables in the service file under `[Service]`:
 
 ```ini
 [Service]
-Environment="PYTHONPATH=/home/pi/lego-train-controller"
+Environment="PYTHONPATH=/home/pi/lego-bluetooth-controller"
 Environment="LOG_LEVEL=DEBUG"
 Environment="CUSTOM_VAR=value"
 ```
@@ -377,10 +377,10 @@ To run multiple instances on different ports:
 
 ```bash
 # Create a second service file
-sudo cp /etc/systemd/system/lego-controller.service /etc/systemd/system/lego-controller-2.service
+sudo cp /etc/systemd/system/lego-bluetooth-controller.service /etc/systemd/system/lego-bluetooth-controller-2.service
 
 # Edit it with different port and log files
-sudo nano /etc/systemd/system/lego-controller-2.service
+sudo nano /etc/systemd/system/lego-bluetooth-controller-2.service
 ```
 
 Change:
@@ -403,7 +403,7 @@ nano ~/monitor-lego-service.sh
 Add this content:
 ```bash
 #!/bin/bash
-if ! systemctl is-active --quiet lego-controller; then
+if ! systemctl is-active --quiet lego-bluetooth-controller; then
     echo "Service is down! Sending alert..."
     # Add your notification method here (email, SMS, etc.)
 fi
@@ -425,12 +425,12 @@ Add this line to check every 5 minutes:
 The logs can grow large over time. Set up log rotation:
 
 ```bash
-sudo nano /etc/logrotate.d/lego-controller
+sudo nano /etc/logrotate.d/lego-bluetooth-controller
 ```
 
 Add this configuration:
 ```
-/var/log/lego-controller*.log {
+/var/log/lego-bluetooth-controller*.log {
     daily
     missingok
     rotate 14
@@ -458,7 +458,7 @@ To verify the service starts automatically on boot:
 sudo reboot
 
 # After reboot, check service status
-sudo systemctl status lego-controller
+sudo systemctl status lego-bluetooth-controller
 
 # Test the API
 curl http://localhost:8000/health
@@ -474,10 +474,10 @@ Ensure proper permissions on sensitive files:
 
 ```bash
 # Restrict .env file
-chmod 600 ~/lego-train-controller/.env
+chmod 600 ~/lego-bluetooth-controller/.env
 
 # Verify service file permissions
-sudo ls -l /etc/systemd/system/lego-controller.service
+sudo ls -l /etc/systemd/system/lego-bluetooth-controller.service
 # Should be: -rw-r--r-- root root
 ```
 
@@ -502,7 +502,7 @@ Keep system and dependencies updated:
 sudo apt-get update && sudo apt-get upgrade -y
 
 # Python dependencies
-cd ~/lego-train-controller
+cd ~/lego-bluetooth-controller
 source .venv/bin/activate
 pip install -r requirements.txt --upgrade
 ```
@@ -513,32 +513,32 @@ pip install -r requirements.txt --upgrade
 
 ### Installation Paths (Standard Setup)
 
-- **Project Directory**: `/home/pi/lego-train-controller`
-- **Virtual Environment**: `/home/pi/lego-train-controller/.venv`
-- **Uvicorn Binary**: `/home/pi/lego-train-controller/.venv/bin/uvicorn`
-- **Service File**: `/etc/systemd/system/lego-controller.service`
-- **Application Logs**: `/var/log/lego-controller.log`
-- **Error Logs**: `/var/log/lego-controller.error.log`
-- **Environment Config**: `/home/pi/lego-train-controller/.env`
+- **Project Directory**: `/home/pi/lego-bluetooth-controller`
+- **Virtual Environment**: `/home/pi/lego-bluetooth-controller/.venv`
+- **Uvicorn Binary**: `/home/pi/lego-bluetooth-controller/.venv/bin/uvicorn`
+- **Service File**: `/etc/systemd/system/lego-bluetooth-controller.service`
+- **Application Logs**: `/var/log/lego-bluetooth-controller.log`
+- **Error Logs**: `/var/log/lego-bluetooth-controller.error.log`
+- **Environment Config**: `/home/pi/lego-bluetooth-controller/.env`
 
 ### Essential Commands Cheat Sheet
 
 ```bash
 # Service control
-sudo systemctl start lego-controller       # Start
-sudo systemctl stop lego-controller        # Stop
-sudo systemctl restart lego-controller     # Restart
-sudo systemctl status lego-controller      # Status
+sudo systemctl start lego-bluetooth-controller       # Start
+sudo systemctl stop lego-bluetooth-controller        # Stop
+sudo systemctl restart lego-bluetooth-controller     # Restart
+sudo systemctl status lego-bluetooth-controller      # Status
 
 # View logs
-sudo journalctl -u lego-controller -f      # Follow journal
-tail -f /var/log/lego-controller.log       # Follow app logs
+sudo journalctl -u lego-bluetooth-controller -f      # Follow journal
+tail -f /var/log/lego-bluetooth-controller.log       # Follow app logs
 
 # After code update
-cd ~/lego-train-controller && git pull && sudo systemctl restart lego-controller
+cd ~/lego-bluetooth-controller && git pull && sudo systemctl restart lego-bluetooth-controller
 
 # After service file change
-sudo systemctl daemon-reload && sudo systemctl restart lego-controller
+sudo systemctl daemon-reload && sudo systemctl restart lego-bluetooth-controller
 
 # Test service
 curl http://localhost:8000/health
@@ -559,8 +559,8 @@ curl http://localhost:8000/health
 
 If you encounter issues:
 
-1. Check service status: `sudo systemctl status lego-controller`
-2. View logs: `sudo journalctl -u lego-controller -n 100`
+1. Check service status: `sudo systemctl status lego-bluetooth-controller`
+2. View logs: `sudo journalctl -u lego-bluetooth-controller -n 100`
 3. Verify paths in service file match your installation
 4. Ensure all prerequisites are installed
 5. Test manual startup before troubleshooting service issues

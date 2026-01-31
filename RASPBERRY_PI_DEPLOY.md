@@ -38,7 +38,7 @@ Deploy the authenticated LEGO Train Controller service to your Raspberry Pi and 
 ```bash
 # On Raspberry Pi
 cd ~
-git clone https://github.com/themotleycoder/legocontroller.git
+git clone https://github.com/themotleycoder/lego-bluetooth-controller.git
 cd legocontroller
 
 # Or pull latest changes if already cloned
@@ -49,15 +49,15 @@ git pull origin main
 ```bash
 # On your Mac
 rsync -av --exclude 'venv' --exclude '__pycache__' \
-  /Users/jm/src/lego_trains/lego-train-controller/ \
-  pi@192.168.86.39:~/lego-train-controller/
+  /Users/jm/src/lego_trains/lego-bluetooth-controller/ \
+  pi@192.168.86.39:~/lego-bluetooth-controller/
 ```
 
 ### Step 2: Install Dependencies
 
 ```bash
 # On Raspberry Pi
-cd ~/lego-train-controller  # or ~/legocontroller if using git
+cd ~/lego-bluetooth-controller  # or ~/legocontroller if using git
 
 # Update system
 sudo apt-get update && sudo apt-get upgrade -y
@@ -122,7 +122,7 @@ If the test works without asking for a password, you're good!
 
 ```bash
 # Make sure you're in the virtual environment
-source ~/lego-train-controller/venv/bin/activate
+source ~/lego-bluetooth-controller/venv/bin/activate
 
 # Start the service
 python3 webservice/train_service.py
@@ -215,7 +215,7 @@ curl -X POST http://192.168.86.39:8000/train \
 ### Create systemd Service
 
 ```bash
-sudo nano /etc/systemd/system/lego-train.service
+sudo nano /etc/systemd/system/lego-bluetooth-controller.service
 ```
 
 **Add this configuration:**
@@ -227,10 +227,10 @@ After=network.target bluetooth.target
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/lego-train-controller
-Environment="PYTHONPATH=/home/pi/lego-train-controller"
+WorkingDirectory=/home/pi/lego-bluetooth-controller
+Environment="PYTHONPATH=/home/pi/lego-bluetooth-controller"
 Environment="HOST=0.0.0.0"
-ExecStart=/home/pi/lego-train-controller/venv/bin/python3 webservice/train_service.py
+ExecStart=/home/pi/lego-bluetooth-controller/venv/bin/python3 webservice/train_service.py
 Restart=always
 RestartSec=10
 
@@ -244,16 +244,16 @@ WantedBy=multi-user.target
 sudo systemctl daemon-reload
 
 # Enable service to start on boot
-sudo systemctl enable lego-train.service
+sudo systemctl enable lego-bluetooth-controller.service
 
 # Start the service
-sudo systemctl start lego-train.service
+sudo systemctl start lego-bluetooth-controller.service
 
 # Check status
-sudo systemctl status lego-train.service
+sudo systemctl status lego-bluetooth-controller.service
 
 # View logs
-sudo journalctl -u lego-train.service -f
+sudo journalctl -u lego-bluetooth-controller.service -f
 ```
 
 **Service Commands:**
@@ -272,7 +272,7 @@ sudo systemctl status lego-train   # Check status
 
 **Check logs:**
 ```bash
-sudo journalctl -u lego-train.service -n 50
+sudo journalctl -u lego-bluetooth-controller.service -n 50
 ```
 
 **Common issues:**
@@ -307,10 +307,10 @@ sudo -n hcitool cmd 0x08 0x000A 00
 **View service logs:**
 ```bash
 # If running manually
-tail -f ~/lego-train-controller/logs/train_service.log
+tail -f ~/lego-bluetooth-controller/logs/train_service.log
 
 # If running as service
-sudo journalctl -u lego-train.service -f
+sudo journalctl -u lego-bluetooth-controller.service -f
 ```
 
 ### Can't Connect from Flutter App
@@ -343,10 +343,10 @@ curl http://192.168.86.39:8000/health
 systemctl status lego-train
 
 # Recent logs
-sudo journalctl -u lego-train.service --since "10 minutes ago"
+sudo journalctl -u lego-bluetooth-controller.service --since "10 minutes ago"
 
 # Real-time logs
-sudo journalctl -u lego-train.service -f
+sudo journalctl -u lego-bluetooth-controller.service -f
 ```
 
 ### Check Connected Devices
@@ -369,7 +369,7 @@ curl -s http://localhost:8000/connected/trains \
    ```
 
 2. **Update Both .env Files:**
-   - Raspberry Pi: `~/lego-train-controller/.env`
+   - Raspberry Pi: `~/lego-bluetooth-controller/.env`
    - Flutter: `~/src/lego_trains/legocontroller/.env`
 
 3. **Enable Firewall:**
@@ -391,7 +391,7 @@ curl -s http://localhost:8000/connected/trains \
 ### Raspberry Pi Commands
 ```bash
 # Start service manually
-cd ~/lego-train-controller
+cd ~/lego-bluetooth-controller
 source venv/bin/activate
 python3 webservice/train_service.py
 

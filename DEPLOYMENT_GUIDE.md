@@ -36,8 +36,8 @@ hciconfig hci0
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/themotleycoder/legocontroller.git
-cd legocontroller
+git clone https://github.com/themotleycoder/lego-bluetooth-controller.git
+cd lego-bluetooth-controller
 ```
 
 ### 2. Create Virtual Environment
@@ -128,7 +128,7 @@ sudo PYTHONPATH=. venv/bin/uvicorn webservice.train_service:app --host 0.0.0.0 -
 
 **1. Create systemd service file:**
 ```bash
-sudo nano /etc/systemd/system/lego-controller.service
+sudo nano /etc/systemd/system/lego-bluetooth-controller.service
 ```
 
 **2. Add service configuration:**
@@ -141,10 +141,10 @@ Requires=bluetooth.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/home/pi/legocontroller
-Environment="PATH=/home/pi/legocontroller/venv/bin"
-Environment="PYTHONPATH=/home/pi/legocontroller"
-ExecStart=/home/pi/legocontroller/venv/bin/uvicorn webservice.train_service:app --host 0.0.0.0 --port 8000
+WorkingDirectory=/home/pi/lego-bluetooth-controller
+Environment="PATH=/home/pi/lego-bluetooth-controller/venv/bin"
+Environment="PYTHONPATH=/home/pi/lego-bluetooth-controller"
+ExecStart=/home/pi/lego-bluetooth-controller/venv/bin/uvicorn webservice.train_service:app --host 0.0.0.0 --port 8000
 
 # Restart on failure
 Restart=on-failure
@@ -153,7 +153,7 @@ RestartSec=5s
 # Logging
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=lego-controller
+SyslogIdentifier=lego-bluetooth-controller
 
 [Install]
 WantedBy=multi-user.target
@@ -165,25 +165,25 @@ WantedBy=multi-user.target
 sudo systemctl daemon-reload
 
 # Enable service to start on boot
-sudo systemctl enable lego-controller
+sudo systemctl enable lego-bluetooth-controller
 
 # Start service
-sudo systemctl start lego-controller
+sudo systemctl start lego-bluetooth-controller
 
 # Check status
-sudo systemctl status lego-controller
+sudo systemctl status lego-bluetooth-controller
 ```
 
 **4. View logs:**
 ```bash
 # Follow live logs
-sudo journalctl -u lego-controller -f
+sudo journalctl -u lego-bluetooth-controller -f
 
 # View recent logs
-sudo journalctl -u lego-controller -n 100
+sudo journalctl -u lego-bluetooth-controller -n 100
 
 # View logs since boot
-sudo journalctl -u lego-controller -b
+sudo journalctl -u lego-bluetooth-controller -b
 ```
 
 ## Testing
@@ -294,7 +294,7 @@ sudo apt-get install nginx certbot python3-certbot-nginx -y
 
 **Configure Nginx:**
 ```bash
-sudo nano /etc/nginx/sites-available/lego-controller
+sudo nano /etc/nginx/sites-available/lego-bluetooth-controller
 ```
 
 ```nginx
@@ -315,7 +315,7 @@ server {
 **Enable site and get SSL certificate:**
 ```bash
 # Enable site
-sudo ln -s /etc/nginx/sites-available/lego-controller /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/lego-bluetooth-controller /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 
@@ -345,15 +345,15 @@ sudo ufw status
 ### 4. Log Management
 ```bash
 # Create log directory
-sudo mkdir -p /var/log/lego-controller
-sudo chown root:root /var/log/lego-controller
+sudo mkdir -p /var/log/lego-bluetooth-controller
+sudo chown root:root /var/log/lego-bluetooth-controller
 
 # Configure log rotation
-sudo nano /etc/logrotate.d/lego-controller
+sudo nano /etc/logrotate.d/lego-bluetooth-controller
 ```
 
 ```
-/var/log/lego-controller/*.log {
+/var/log/lego-bluetooth-controller/*.log {
     daily
     rotate 7
     compress
@@ -368,7 +368,7 @@ sudo nano /etc/logrotate.d/lego-controller
 **Health Check Script:**
 ```bash
 #!/bin/bash
-# /usr/local/bin/check-lego-controller.sh
+# /usr/local/bin/check-lego-bluetooth-controller.sh
 
 HEALTH_URL="http://localhost:8000/health"
 RESPONSE=$(curl -s "$HEALTH_URL")
@@ -376,14 +376,14 @@ STATUS=$(echo "$RESPONSE" | jq -r '.status')
 
 if [ "$STATUS" != "healthy" ]; then
     echo "Service unhealthy: $RESPONSE"
-    systemctl restart lego-controller
+    systemctl restart lego-bluetooth-controller
 fi
 ```
 
 **Add to crontab:**
 ```bash
 # Check every 5 minutes
-*/5 * * * * /usr/local/bin/check-lego-controller.sh
+*/5 * * * * /usr/local/bin/check-lego-bluetooth-controller.sh
 ```
 
 ## Troubleshooting
@@ -392,7 +392,7 @@ fi
 
 **Check logs:**
 ```bash
-sudo journalctl -u lego-controller -n 50 --no-pager
+sudo journalctl -u lego-bluetooth-controller -n 50 --no-pager
 ```
 
 **Common issues:**
@@ -463,7 +463,7 @@ STATUS_UPDATE_INTERVAL=0.5
 ### Pull Latest Changes
 ```bash
 # Stop service
-sudo systemctl stop lego-controller
+sudo systemctl stop lego-bluetooth-controller
 
 # Update code
 git pull origin main
@@ -473,10 +473,10 @@ source venv/bin/activate
 pip install -r requirements.txt --upgrade
 
 # Restart service
-sudo systemctl start lego-controller
+sudo systemctl start lego-bluetooth-controller
 
 # Verify
-sudo systemctl status lego-controller
+sudo systemctl status lego-bluetooth-controller
 ```
 
 ## Support
@@ -484,13 +484,13 @@ sudo systemctl status lego-controller
 ### Useful Commands
 ```bash
 # Service management
-sudo systemctl start lego-controller
-sudo systemctl stop lego-controller
-sudo systemctl restart lego-controller
-sudo systemctl status lego-controller
+sudo systemctl start lego-bluetooth-controller
+sudo systemctl stop lego-bluetooth-controller
+sudo systemctl restart lego-bluetooth-controller
+sudo systemctl status lego-bluetooth-controller
 
 # View logs
-sudo journalctl -u lego-controller -f
+sudo journalctl -u lego-bluetooth-controller -f
 
 # Test configuration
 sudo PYTHONPATH=. venv/bin/python -c "from config import get_settings; print(get_settings())"
@@ -500,7 +500,7 @@ curl http://localhost:8000/health | jq
 ```
 
 ### Getting Help
-- Check logs: `sudo journalctl -u lego-controller -n 100`
+- Check logs: `sudo journalctl -u lego-bluetooth-controller -n 100`
 - Review [SECURITY.md](SECURITY.md) for security questions
 - Test with curl commands above
 - Check GitHub issues

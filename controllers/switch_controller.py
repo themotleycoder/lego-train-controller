@@ -6,6 +6,9 @@ import time
 
 from servers.bluetooth_scanner import BetterBleScanner
 from utils.constants import LEGO_MANUFACTURER_IDS
+from utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 class SwitchController:
     def __init__(self):
@@ -29,14 +32,14 @@ class SwitchController:
         binary = format(port_connections & 0x0F, '04b')
         
         # Detailed logging
-        print("\nPort Connection Analysis:")
-        print(f"Raw value: {port_connections}")
-        print(f"Binary: {binary}")
+        logger.debug("Port Connection Analysis:")
+        logger.debug(f"Raw value: {port_connections}")
+        logger.debug(f"Binary: {binary}")
         
         for port, bit in [('A', 0b1000), ('B', 0b0100), ('C', 0b0010), ('D', 0b0001)]:
             connected = bool(port_connections & bit)
             switch_states[f'SWITCH_{port}'] = int(connected)
-            print(f"Port {port}: {'Connected' if connected else 'Disconnected'} (bit: {bit:04b})")
+            logger.debug(f"Port {port}: {'Connected' if connected else 'Disconnected'} (bit: {bit:04b})")
         
         return switch_states
 
@@ -46,14 +49,14 @@ class SwitchController:
         """
         switch_positions = {}
         binary = format(status_byte & 0x0F, '04b')
-        print(f"\nSwitch Status Analysis:")
-        print(f"Raw status: {status_byte}")
-        print(f"Binary: {binary}")
+        logger.debug("Switch Status Analysis:")
+        logger.debug(f"Raw status: {status_byte}")
+        logger.debug(f"Binary: {binary}")
         
         for port, bit in [('A', 0b1000), ('B', 0b0100), ('C', 0b0010), ('D', 0b0001)]:
             position = bool(status_byte & bit)
             switch_positions[f'SWITCH_{port}'] = int(position)
-            print(f"Switch {port}: {'DIVERGING' if position else 'STRAIGHT'} (bit: {bit:04b})")
+            logger.debug(f"Switch {port}: {'DIVERGING' if position else 'STRAIGHT'} (bit: {bit:04b})")
         
         return switch_positions
 
@@ -70,7 +73,7 @@ class SwitchController:
             raise ValueError(f"Invalid position: {position}. Must be 0 or 1")
             
         command_value = (switch_num * 1000) + position
-        print(f"Encoded command: Switch {switch_letter} (num {switch_num}) to position {position}")
+        logger.debug(f"Encoded command: Switch {switch_letter} (num {switch_num}) to position {position}")
         return command_value
 
     async def send_command_with_retry(self, hub_id, switch_name, position, max_retries=3):
@@ -86,7 +89,7 @@ class SwitchController:
 
         for attempt in range(max_retries):
             if attempt > 0:
-                print(f"\nRetry {attempt + 1}/{max_retries} for switch {switch_name}")
+                logger.info(f"Retry {attempt + 1}/{max_retries} for switch {switch_name}")
                 await asyncio.sleep(0.5 * attempt)  # Increasing backoff delay
             
             try:
@@ -95,19 +98,19 @@ class SwitchController:
                 
                 # Wait and verify the change
                 if await self._verify_switch_position(hub_id, switch_name, position, timeout=2.0):
-                    print(f"Switch {switch_name} successfully changed to {'DIVERGING' if position else 'STRAIGHT'}")
+                    logger.info(f"Switch {switch_name} successfully changed to {'DIVERGING' if position else 'STRAIGHT'}")
                     self.reliability_stats[switch_name]['successes'] += 1
                     return True
                     
             except Exception as e:
-                print(f"Command attempt {attempt + 1} failed: {e}")
+                logger.warning(f"Command attempt {attempt + 1} failed: {e}")
 
-        print(f"Failed to change switch {switch_name} after {max_retries} attempts")
+        logger.error(f"Failed to change switch {switch_name} after {max_retries} attempts")
         success_rate = (self.reliability_stats[switch_name]['successes'] / 
                        self.reliability_stats[switch_name]['attempts'] * 100)
-        print(f"Switch {switch_name} reliability: {success_rate:.1f}% "
-              f"({self.reliability_stats[switch_name]['successes']}/"
-              f"{self.reliability_stats[switch_name]['attempts']} successful)")
+        logger.info(f"Switch {switch_name} reliability: {success_rate:.1f}% "
+                   f"({self.reliability_stats[switch_name]['successes']}/"
+                   f"{self.reliability_stats[switch_name]['attempts']} successful)")
         return False
 
     async def _send_command_robust(self, hub_id, switch_name, position):
@@ -158,10 +161,10 @@ class SwitchController:
                 await asyncio.sleep(0.2)
 
         except subprocess.CalledProcessError as e:
-            print(f"Bluetooth command failed: {e.stderr.decode()}")
+            logger.error(f"Bluetooth command failed: {e.stderr.decode()}")
             raise
         except Exception as e:
-            print(f"Error in robust command send: {e}")
+            logger.error(f"Error in robust command send: {e}", exc_info=True)
             raise
 
     async def _verify_switch_position(self, hub_id, switch_name, expected_position, timeout=2.0):
@@ -181,23 +184,23 @@ class SwitchController:
                     if current_pos != last_position:
                         position_changes += 1
                         last_position = current_pos
-                        print(f"Switch position changed to: {current_pos}")
+                        logger.debug(f"Switch position changed to: {current_pos}")
                     
                     if current_pos == expected_position:
                         return True
                         
                     # Connection status check
                     if not status.get('switch_states', {}).get(switch_name):
-                        print(f"Warning: Switch {switch_name} appears disconnected")
-                        print(f"Full status: {status}")
+                        logger.warning(f"Warning: Switch {switch_name} appears disconnected")
+                        logger.debug(f"Full status: {status}")
                     
                 await asyncio.sleep(check_interval)
                 
             except Exception as e:
-                print(f"Error checking switch position: {e}")
+                logger.error(f"Error checking switch position: {e}", exc_info=True)
                 
-        print(f"Verification failed. Position changes observed: {position_changes}")
-        print(f"Last known position: {last_position}, Expected: {expected_position}")
+        logger.warning(f"Verification failed. Position changes observed: {position_changes}")
+        logger.debug(f"Last known position: {last_position}, Expected: {expected_position}")
         return False
 
     async def start_status_monitoring(self):
@@ -210,7 +213,7 @@ class SwitchController:
                 if device.name and "Technic Hub" in device.name:
                     if 919 in advertisement_data.manufacturer_data:
                         data = advertisement_data.manufacturer_data[919]
-                        print(f"\nRaw manufacturer data: {[hex(x) for x in data]}")
+                        logger.debug(f"Raw manufacturer data: {[hex(x) for x in data]}")
                         
                         if len(data) >= 7:
                             try:
@@ -238,34 +241,34 @@ class SwitchController:
                                     self.last_status = status_data.copy()
                                     self.last_update_times[hub_id] = current_time
 
-                                    print(f"\nStatus update from {device.name}:")
-                                    print(f"RSSI: {advertisement_data.rssi} dBm")
-                                    print(f"Switch positions: {switch_positions}")
-                                    print(f"Connected ports: {switch_states}")
+                                    logger.debug(f"Status update from {device.name}:")
+                                    logger.debug(f"RSSI: {advertisement_data.rssi} dBm")
+                                    logger.debug(f"Switch positions: {switch_positions}")
+                                    logger.debug(f"Connected ports: {switch_states}")
                             
                             except Exception as e:
-                                print(f"Error processing switch data: {e}")
+                                logger.error(f"Error processing switch data: {e}", exc_info=True)
                                 import traceback
                                 traceback.print_exc()
 
             except Exception as e:
-                print(f"Error in switch status callback: {e}")
+                logger.error(f"Error in switch status callback: {e}", exc_info=True)
                 import traceback
                 traceback.print_exc()
 
-        print("\nStarting switch status monitoring...")
+        logger.info("Starting switch status monitoring...")
         while self.running:
             try:
-                print("Setting up scanner...")
+                logger.debug("Setting up scanner...")
                 await self.scanner.start_scan(status_callback)
-                print("Scanner started, waiting for events...")
+                logger.debug("Scanner started, waiting for events...")
                 
                 while self.running:
                     await asyncio.sleep(0.05)  # Reduced sleep for better responsiveness
                     
             except Exception as e:
-                print(f"Error in monitor loop: {e}")
-                print("Waiting before retry...")
+                logger.error(f"Error in monitor loop: {e}", exc_info=True)
+                logger.info("Waiting before retry...")
                 await asyncio.sleep(1)
             finally:
                 await self.scanner.stop_scan()
@@ -279,13 +282,13 @@ class SwitchController:
                 
                 success = await self.send_command_with_retry(hub_id, switch_name, position)
                 if not success:
-                    print(f"Warning: Command failed for switch {switch_name}")
+                    logger.warning(f"Warning: Command failed for switch {switch_name}")
                     
                 self.command_queue.task_done()
                 await asyncio.sleep(0.2)  # Prevent command flooding
                 
             except Exception as e:
-                print(f"Error processing switch command: {e}")
+                logger.error(f"Error processing switch command: {e}", exc_info=True)
 
     def get_connected_switches(self):
         """Enhanced connected switch information"""
@@ -324,7 +327,7 @@ class SwitchController:
 
     async def stop_status_monitoring(self):
         """Cleanup and stop monitoring"""
-        print("Stopping switch status monitoring...")
+        logger.info("Stopping switch status monitoring...")
         self.running = False
         if self.command_task:
             self.command_task.cancel()
@@ -333,4 +336,4 @@ class SwitchController:
             except asyncio.CancelledError:
                 pass
         await self.scanner.stop_scan()
-        print("Switch monitor stopped")
+        logger.info("Switch monitor stopped")

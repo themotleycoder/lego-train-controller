@@ -14,6 +14,9 @@ from fastapi import FastAPI, HTTPException, Depends, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, validator
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from config import get_settings
 from middleware.auth import api_key_header, verify_api_key
@@ -27,14 +30,21 @@ logger = get_logger(__name__)
 # Initialize settings
 settings = get_settings()
 
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
 # Create FastAPI app with metadata
 app = FastAPI(
-    title="LEGO Train Controller API",
+    title="LEGO Bluetooth Controller API",
     description="REST API for controlling LEGO Powered Up trains and switches via Bluetooth",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Add rate limiter to app state and register exception handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Add CORS middleware with configured origins
 logger.info(f"Configuring CORS with allowed origins: {settings.allowed_origins_list}")
@@ -92,7 +102,7 @@ async def log_requests(request: Request, call_next):
 @app.on_event("startup")
 async def startup_event():
     """Initialize the controller when the FastAPI app starts."""
-    logger.info("Starting up LEGO Train Controller API service")
+    logger.info("Starting up LEGO Bluetooth Controller API service")
     logger.info(f"Authentication {'enabled' if settings.require_auth else 'disabled'}")
     logger.info(f"Bluetooth reset on startup: {settings.bluetooth_reset_on_startup}")
 
@@ -206,7 +216,8 @@ class HealthResponse(BaseModel):
     summary="Health check endpoint",
     description="Check service health and availability. No authentication required."
 )
-async def health_check():
+@limiter.limit("100/minute")
+async def health_check(request: Request):
     """
     Health check endpoint for monitoring.
 
@@ -272,7 +283,9 @@ async def health_check():
     summary="Toggle train self-drive mode",
     description="Enable or disable autonomous self-drive mode for a train"
 )
+@limiter.limit("30/minute")
 async def control_train_drive(
+    request: Request,
     command: TrainDriveCommand,
     api_key: str = Depends(api_key_header)
 ):
@@ -303,7 +316,9 @@ async def control_train_drive(
     summary="Control train power",
     description="Set the motor power for a train (-100 to 100)"
 )
+@limiter.limit("30/minute")
 async def control_train_power(
+    request: Request,
     command: TrainPowerCommand,
     api_key: str = Depends(api_key_header)
 ):
@@ -333,7 +348,9 @@ async def control_train_power(
     summary="Control track switch",
     description="Set the position of a track switch (STRAIGHT or DIVERGING)"
 )
+@limiter.limit("30/minute")
 async def control_switch(
+    request: Request,
     command: SwitchCommand,
     api_key: str = Depends(api_key_header)
 ):
@@ -390,7 +407,8 @@ async def control_switch(
     summary="Get connected trains",
     description="Retrieve status information for all connected train hubs"
 )
-async def get_connected_trains(api_key: str = Depends(api_key_header)):
+@limiter.limit("60/minute")
+async def get_connected_trains(request: Request, api_key: str = Depends(api_key_header)):
     """Get information about all connected train hubs."""
     await verify_api_key(api_key)
 
@@ -427,7 +445,8 @@ async def get_connected_trains(api_key: str = Depends(api_key_header)):
     summary="Get connected switches",
     description="Retrieve status information for all connected switch hubs"
 )
-async def get_connected_switches(api_key: str = Depends(api_key_header)):
+@limiter.limit("60/minute")
+async def get_connected_switches(request: Request, api_key: str = Depends(api_key_header)):
     """
     Get information about all connected switch hubs.
 
@@ -461,7 +480,8 @@ async def get_connected_switches(api_key: str = Depends(api_key_header)):
     summary="Reset Bluetooth adapter",
     description="Reset the Bluetooth adapter to clear connection issues"
 )
-async def reset_bluetooth(api_key: str = Depends(api_key_header)):
+@limiter.limit("10/minute")
+async def reset_bluetooth(request: Request, api_key: str = Depends(api_key_header)):
     """
     Reset Bluetooth adapter.
 

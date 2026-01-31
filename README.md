@@ -1,4 +1,4 @@
-# lego-train-controller
+# lego-bluetooth-controller
 
 A Python-based controller for LEGO Technic Hubs using Bluetooth Low Energy (BLE) communication. This project allows you to control LEGO switches and trains through both a REST API and command-line interface. It supports advanced features like self-driving trains with color pattern recognition and reliable switch control.
 
@@ -18,8 +18,8 @@ A Python-based controller for LEGO Technic Hubs using Bluetooth Low Energy (BLE)
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/lego-train-controller.git
-   cd lego-train-controller
+   git clone https://github.com/themotleycoder/lego-bluetooth-controller.git
+   cd lego-bluetooth-controller
    ```
 
 2. Create and activate a virtual environment (recommended):
@@ -40,7 +40,7 @@ A Python-based controller for LEGO Technic Hubs using Bluetooth Low Energy (BLE)
 You can run the web service directly using uvicorn:
 
 ```bash
-sudo PYTHONPATH=/path/to/lego-train-controller uvicorn webservice.train_service:app --host 0.0.0.0 --port 8000
+sudo PYTHONPATH=/path/to/lego-bluetooth-controller uvicorn webservice.train_service:app --host 0.0.0.0 --port 8000
 ```
 
 ### As a System Service
@@ -65,9 +65,9 @@ Quick setup:
    Type=simple
    User=pi
    Group=bluetooth
-   WorkingDirectory=/home/pi/lego-train-controller
-   Environment="PYTHONPATH=/home/pi/lego-train-controller"
-   ExecStart=/home/pi/lego-train-controller/.venv/bin/uvicorn webservice.train_service:app --host 0.0.0.0 --port 8000
+   WorkingDirectory=/home/pi/lego-bluetooth-controller
+   Environment="PYTHONPATH=/home/pi/lego-bluetooth-controller"
+   ExecStart=/home/pi/lego-bluetooth-controller/.venv/bin/uvicorn webservice.train_service:app --host 0.0.0.0 --port 8000
    Restart=always
    RestartSec=10
 
@@ -158,7 +158,7 @@ The web service runs on port 8000 and provides the following REST API endpoints:
 - Support for multiple LEGO Technic Hubs
 - REST API for remote control
 - Systemd service integration for production deployment
-- Logging to system files (/var/log/lego-controller.log)
+- Logging to system files (/var/log/lego-bluetooth-controller.log)
 
 ## Technical Details
 
@@ -166,10 +166,10 @@ The project consists of several components:
 
 ### Project Structure
 ```
-lego-train-controller/
+lego-bluetooth-controller/
 ├── __init__.py
 ├── .gitignore
-├── lego-controller.service_example  # Systemd service template (customize before use)
+├── lego-bluetooth-controller.service_example  # Systemd service template (customize before use)
 ├── lego-controller.service          # Your customized service file (not in git)
 ├── README.md
 ├── requirements.txt
@@ -262,7 +262,7 @@ If you encounter issues:
 
 2. View application logs:
    ```bash
-   sudo tail -f /var/log/lego-controller.log
+   sudo tail -f /var/log/lego-bluetooth-controller.log
    sudo tail -f /var/log/lego-controller.error.log
    ```
 

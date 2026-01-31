@@ -9,11 +9,11 @@ Type=simple
 User=pi
 Group=bluetooth
 # Update WorkingDirectory to your project installation path
-WorkingDirectory=/home/pi/lego-train-controller
+WorkingDirectory=/home/pi/lego-bluetooth-controller
 # Update PYTHONPATH to match WorkingDirectory
-Environment="PYTHONPATH=/home/pi/lego-train-controller"
+Environment="PYTHONPATH=/home/pi/lego-bluetooth-controller"
 # Update ExecStart path to match your virtual environment location
-ExecStart=/home/pi/lego-train-controller/.venv/bin/uvicorn webservice.train_service:app --host 0.0.0.0 --port 8000
+ExecStart=/home/pi/lego-bluetooth-controller/.venv/bin/uvicorn webservice.train_service:app --host 0.0.0.0 --port 8000
 StandardOutput=append:/var/log/lego-controller.log
 StandardError=append:/var/log/lego-controller.error.log
 Restart=always

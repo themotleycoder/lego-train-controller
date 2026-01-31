@@ -3,6 +3,9 @@ import asyncio
 import time
 from bleak import BleakScanner
 import subprocess
+from utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 class BetterBleScanner:
     def __init__(self):
@@ -15,23 +18,23 @@ class BetterBleScanner:
         async with self._lock:  # Use lock to prevent concurrent scans
             try:
                 if self._scanning:
-                    print("Scanner already running, stopping first...")
+                    logger.info("Scanner already running, stopping first...")
                     await self.stop_scan()
                     await asyncio.sleep(1)  # Give time for cleanup
                 
-                print("Resetting Bluetooth...")
+                logger.info("Resetting Bluetooth...")
                 await self.reset_bluetooth()
                 await asyncio.sleep(1)  # Wait for reset
 
-                print("Creating new scanner...")
+                logger.debug("Creating new scanner...")
                 self.scanner = BleakScanner(callback)
-                print("Starting scan...")
+                logger.debug("Starting scan...")
                 await self.scanner.start()
                 self._scanning = True
-                print("Scanning started successfully")
+                logger.info("Scanning started successfully")
                 
             except Exception as e:
-                print(f"Error starting scan: {e}")
+                logger.error(f"Error starting scan: {e}", exc_info=True)
                 self._scanning = False
                 self.scanner = None
                 raise
@@ -41,13 +44,13 @@ class BetterBleScanner:
         async with self._lock:
             if self.scanner and self._scanning:
                 try:
-                    print("Stopping scanner...")
+                    logger.debug("Stopping scanner...")
                     await self.scanner.stop()
                     self._scanning = False
                     self.scanner = None
-                    print("Scanner stopped successfully")
+                    logger.info("Scanner stopped successfully")
                 except Exception as e:
-                    print(f"Warning - error stopping scanner: {e}")
+                    logger.warning(f"Warning - error stopping scanner: {e}")
                 finally:
                     self._scanning = False
                     self.scanner = None
@@ -55,7 +58,7 @@ class BetterBleScanner:
     async def reset_bluetooth(self):
         """Reset Bluetooth to a known state"""
         try:
-            print("\nResetting Bluetooth...")
+            logger.info("Resetting Bluetooth...")
             
             # Simple reset using bluetoothctl
             commands = [
@@ -68,12 +71,12 @@ class BetterBleScanner:
                     subprocess.run(cmd, check=True, capture_output=True)
                     await asyncio.sleep(0.5)  # Longer delay between commands
                 except subprocess.CalledProcessError as e:
-                    print(f"Warning - command {cmd} failed: {e}")
+                    logger.warning(f"Warning - command {cmd} failed: {e}")
                     continue
                     
-            print("Bluetooth reset complete")
+            logger.info("Bluetooth reset complete")
         except Exception as e:
-            print(f"Error during Bluetooth reset: {e}")
+            logger.error(f"Error during Bluetooth reset: {e}", exc_info=True)
             raise
 
     @property

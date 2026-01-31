@@ -11,6 +11,7 @@ python-dotenv>=1.0.0
 
 # Security
 python-multipart>=0.0.6
+slowapi>=0.1.9  # Rate limiting
 
 # Logging (optional, but recommended for production)
 # python-json-logger>=2.0.7  # Uncomment for better JSON logging
