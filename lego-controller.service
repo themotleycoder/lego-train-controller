@@ -1,0 +1,20 @@
+[Unit]
+Description=Lego Train and Switch Controller Service
+After=network.target bluetooth.target
+Requires=bluetooth.service
+
+[Service]
+Type=simple
+User=jm
+Group=bluetooth
+WorkingDirectory=/home/jm/lego-bluetooth-controller
+Environment="PYTHONPATH=/home/jm/lego-bluetooth-controller"
+# Using python -m uvicorn is more reliable than calling uvicorn directly
+ExecStart=/home/jm/lego-bluetooth-controller/.venv/bin/python -m uvicorn webservice.train_service:app --host 0.0.0.0 --port 8000
+StandardOutput=append:/var/log/lego-controller.log
+StandardError=append:/var/log/lego-controller.error.log
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
