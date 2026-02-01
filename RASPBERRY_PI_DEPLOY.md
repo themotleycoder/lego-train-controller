@@ -26,7 +26,7 @@ Deploy the authenticated LEGO Train Controller service to your Raspberry Pi and 
 
 2. **Get Raspberry Pi IP Address**
    - You'll need this for the Flutter app configuration
-   - Example: `192.168.86.39` (update Flutter .env with this)
+   - Example: `192.168.1.100` (update Flutter .env with this)
 
 ---
 
@@ -47,10 +47,10 @@ git pull origin main
 
 **Option B: Using rsync/scp**
 ```bash
-# On your Mac
+# On your Mac (update the paths to match your setup)
 rsync -av --exclude 'venv' --exclude '__pycache__' \
-  /Users/jm/src/lego_trains/lego-bluetooth-controller/ \
-  pi@192.168.86.39:~/lego-bluetooth-controller/
+  /path/to/lego-bluetooth-controller/ \
+  pi@192.168.1.100:~/lego-bluetooth-controller/
 ```
 
 ### Step 2: Install Dependencies
@@ -91,7 +91,7 @@ API_KEYS=your-api-key-here
 REQUIRE_AUTH=true
 
 # CORS Configuration
-ALLOWED_ORIGINS=http://localhost:8080,capacitor://localhost,http://192.168.86.39:8080
+ALLOWED_ORIGINS=http://localhost:8080,capacitor://localhost,http://192.168.1.100:8080
 
 # Logging
 LOG_LEVEL=INFO
@@ -150,7 +150,7 @@ nano ~/src/lego_trains/legocontroller/.env
 
 **Update with Raspberry Pi IP:**
 ```bash
-BACKEND_URL=http://192.168.86.39:8000
+BACKEND_URL=http://192.168.1.100:8000
 API_KEY=your-api-key-here
 REQUEST_TIMEOUT_SECONDS=5
 POLL_INTERVAL_SECONDS=1
@@ -170,7 +170,7 @@ flutter run
 
 ```bash
 # From your Mac or Raspberry Pi
-curl http://192.168.86.39:8000/health | python3 -m json.tool
+curl http://192.168.1.100:8000/health | python3 -m json.tool
 ```
 
 **Expected Response:**
@@ -190,17 +190,17 @@ curl http://192.168.86.39:8000/health | python3 -m json.tool
 
 ```bash
 # Should FAIL without API key
-curl -X GET http://192.168.86.39:8000/connected/trains
+curl -X GET http://192.168.1.100:8000/connected/trains
 
 # Should SUCCEED with API key
-curl -X GET http://192.168.86.39:8000/connected/trains \
+curl -X GET http://192.168.1.100:8000/connected/trains \
   -H "X-API-Key: your-api-key-here"
 ```
 
 ### 3. Test Train Control
 
 ```bash
-curl -X POST http://192.168.86.39:8000/train \
+curl -X POST http://192.168.1.100:8000/train \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-api-key-here" \
   -d '{"hub_id": 101, "power": 30}'
@@ -319,7 +319,7 @@ sudo journalctl -u lego-bluetooth-controller.service -f
 ```bash
 # On Raspberry Pi
 hostname -I  # Get IP address
-ping 192.168.86.172  # Ping your Mac
+ping 192.168.1.50  # Ping your Mac
 ```
 
 **Check firewall (if enabled):**
@@ -329,7 +329,7 @@ sudo ufw allow 8000
 
 **Test from Mac:**
 ```bash
-curl http://192.168.86.39:8000/health
+curl http://192.168.1.100:8000/health
 ```
 
 ---
@@ -418,14 +418,14 @@ flutter run
 ### Testing Commands
 ```bash
 # Health check
-curl http://192.168.86.39:8000/health
+curl http://192.168.1.100:8000/health
 
 # Get trains
-curl http://192.168.86.39:8000/connected/trains \
+curl http://192.168.1.100:8000/connected/trains \
   -H "X-API-Key: your-api-key-here"
 
 # Control train
-curl -X POST http://192.168.86.39:8000/train \
+curl -X POST http://192.168.1.100:8000/train \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-api-key-here" \
   -d '{"hub_id": 101, "power": 50}'
