@@ -170,4 +170,7 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+# Personal systemd service files (use .service_example as template)
 lego-bluetooth-controller.service
+lego-controller.service
+*-controller.service
