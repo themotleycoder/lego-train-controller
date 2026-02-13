@@ -407,7 +407,7 @@ async def control_switch(
     summary="Get connected trains",
     description="Retrieve status information for all connected train hubs"
 )
-@limiter.limit("60/minute")
+@limiter.limit("200/minute")
 async def get_connected_trains(request: Request, api_key: str = Depends(api_key_header)):
     """Get information about all connected train hubs."""
     await verify_api_key(api_key)
@@ -445,7 +445,7 @@ async def get_connected_trains(request: Request, api_key: str = Depends(api_key_
     summary="Get connected switches",
     description="Retrieve status information for all connected switch hubs"
 )
-@limiter.limit("60/minute")
+@limiter.limit("200/minute")
 async def get_connected_switches(request: Request, api_key: str = Depends(api_key_header)):
     """
     Get information about all connected switch hubs.
