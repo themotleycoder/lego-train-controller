@@ -3,6 +3,7 @@ Unit tests for authentication middleware.
 
 Tests API key validation and authentication flow.
 """
+
 import pytest
 from fastapi import HTTPException, status
 from unittest.mock import MagicMock, patch
@@ -19,8 +20,7 @@ class TestAuthentication:
         """Test verification with valid API key."""
         with patch("middleware.auth.get_settings") as mock_settings:
             mock_settings.return_value = Settings(
-                api_keys=test_api_key,
-                require_auth=True
+                api_keys=test_api_key, require_auth=True
             )
 
             result = await verify_api_key(test_api_key)
@@ -31,8 +31,7 @@ class TestAuthentication:
         """Test verification with invalid API key."""
         with patch("middleware.auth.get_settings") as mock_settings:
             mock_settings.return_value = Settings(
-                api_keys="valid-key-12345",
-                require_auth=True
+                api_keys="valid-key-12345", require_auth=True
             )
 
             with pytest.raises(HTTPException) as exc_info:
@@ -46,8 +45,7 @@ class TestAuthentication:
         """Test verification with missing API key."""
         with patch("middleware.auth.get_settings") as mock_settings:
             mock_settings.return_value = Settings(
-                api_keys="test-key",
-                require_auth=True
+                api_keys="test-key", require_auth=True
             )
 
             with pytest.raises(HTTPException) as exc_info:
@@ -61,8 +59,7 @@ class TestAuthentication:
         """Test that invalid key is accepted when auth is disabled."""
         with patch("middleware.auth.get_settings") as mock_settings:
             mock_settings.return_value = Settings(
-                api_keys="valid-key",
-                require_auth=False
+                api_keys="valid-key", require_auth=False
             )
 
             result = await verify_api_key(invalid_api_key)
@@ -73,8 +70,7 @@ class TestAuthentication:
         """Test verification with multiple valid API keys."""
         with patch("middleware.auth.get_settings") as mock_settings:
             mock_settings.return_value = Settings(
-                api_keys="key1,key2,key3",
-                require_auth=True
+                api_keys="key1,key2,key3", require_auth=True
             )
 
             result = await verify_api_key("key2")
@@ -85,8 +81,7 @@ class TestAuthentication:
         """Test request authentication with API key header."""
         with patch("middleware.auth.get_settings") as mock_settings:
             mock_settings.return_value = Settings(
-                api_keys=test_api_key,
-                require_auth=True
+                api_keys=test_api_key, require_auth=True
             )
 
             # Mock request with API key header
@@ -101,8 +96,7 @@ class TestAuthentication:
         """Test request authentication without API key header."""
         with patch("middleware.auth.get_settings") as mock_settings:
             mock_settings.return_value = Settings(
-                api_keys="test-key",
-                require_auth=True
+                api_keys="test-key", require_auth=True
             )
 
             # Mock request without API key header
@@ -119,8 +113,7 @@ class TestAuthentication:
         """Test request authentication when auth is disabled."""
         with patch("middleware.auth.get_settings") as mock_settings:
             mock_settings.return_value = Settings(
-                api_keys="test-key",
-                require_auth=False
+                api_keys="test-key", require_auth=False
             )
 
             # Mock request without API key
@@ -142,8 +135,7 @@ class TestAuthentication:
         """Test API key validation handles whitespace."""
         with patch("middleware.auth.get_settings") as mock_settings:
             mock_settings.return_value = Settings(
-                api_keys=" key1 , key2 , key3 ",
-                require_auth=True
+                api_keys=" key1 , key2 , key3 ", require_auth=True
             )
 
             # Should work with trimmed key
@@ -155,8 +147,7 @@ class TestAuthentication:
         """Test verification with empty string API key."""
         with patch("middleware.auth.get_settings") as mock_settings:
             mock_settings.return_value = Settings(
-                api_keys="valid-key",
-                require_auth=True
+                api_keys="valid-key", require_auth=True
             )
 
             with pytest.raises(HTTPException) as exc_info:

@@ -3,6 +3,7 @@ Integration tests for API endpoints.
 
 Tests FastAPI endpoints with mocked controllers and authentication.
 """
+
 import pytest
 from fastapi import status
 
@@ -48,10 +49,7 @@ class TestTrainControlEndpoints:
 
     def test_train_power_without_auth(self, client):
         """Test train power endpoint rejects requests without API key."""
-        response = client.post(
-            "/train",
-            json={"hub_id": 12, "power": 50}
-        )
+        response = client.post("/train", json={"hub_id": 12, "power": 50})
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         data = response.json()
@@ -62,19 +60,21 @@ class TestTrainControlEndpoints:
         response = client.post(
             "/train",
             json={"hub_id": 12, "power": 50},
-            headers={"X-API-Key": invalid_api_key}
+            headers={"X-API-Key": invalid_api_key},
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
         data = response.json()
         assert "Invalid API key" in data["detail"]
 
-    def test_train_power_with_valid_auth(self, client, test_api_key, mock_lego_controller):
+    def test_train_power_with_valid_auth(
+        self, client, test_api_key, mock_lego_controller
+    ):
         """Test train power endpoint accepts valid API key."""
         response = client.post(
             "/train",
             json={"hub_id": 12, "power": 50},
-            headers={"X-API-Key": test_api_key}
+            headers={"X-API-Key": test_api_key},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -88,7 +88,7 @@ class TestTrainControlEndpoints:
         response = client.post(
             "/train",
             json={"hub_id": 12, "power": 150},
-            headers={"X-API-Key": test_api_key}
+            headers={"X-API-Key": test_api_key},
         )
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -100,7 +100,7 @@ class TestTrainControlEndpoints:
         response = client.post(
             "/train",
             json={"hub_id": 12, "power": -150},
-            headers={"X-API-Key": test_api_key}
+            headers={"X-API-Key": test_api_key},
         )
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -111,7 +111,7 @@ class TestTrainControlEndpoints:
         response = client.post(
             "/train",
             json={"hub_id": 12, "power": -100},
-            headers={"X-API-Key": test_api_key}
+            headers={"X-API-Key": test_api_key},
         )
         assert response.status_code == status.HTTP_200_OK
 
@@ -119,7 +119,7 @@ class TestTrainControlEndpoints:
         response = client.post(
             "/train",
             json={"hub_id": 12, "power": 100},
-            headers={"X-API-Key": test_api_key}
+            headers={"X-API-Key": test_api_key},
         )
         assert response.status_code == status.HTTP_200_OK
 
@@ -127,16 +127,13 @@ class TestTrainControlEndpoints:
         response = client.post(
             "/train",
             json={"hub_id": 12, "power": 0},
-            headers={"X-API-Key": test_api_key}
+            headers={"X-API-Key": test_api_key},
         )
         assert response.status_code == status.HTTP_200_OK
 
     def test_selfdrive_without_auth(self, client):
         """Test self-drive endpoint rejects requests without API key."""
-        response = client.post(
-            "/selfdrive",
-            json={"hub_id": 12, "self_drive": 1}
-        )
+        response = client.post("/selfdrive", json={"hub_id": 12, "self_drive": 1})
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -145,7 +142,7 @@ class TestTrainControlEndpoints:
         response = client.post(
             "/selfdrive",
             json={"hub_id": 12, "self_drive": 1},
-            headers={"X-API-Key": test_api_key}
+            headers={"X-API-Key": test_api_key},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -158,7 +155,7 @@ class TestTrainControlEndpoints:
         response = client.post(
             "/selfdrive",
             json={"hub_id": 12, "self_drive": 2},
-            headers={"X-API-Key": test_api_key}
+            headers={"X-API-Key": test_api_key},
         )
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -170,8 +167,7 @@ class TestSwitchControlEndpoints:
     def test_switch_without_auth(self, client):
         """Test switch endpoint rejects requests without API key."""
         response = client.post(
-            "/switch",
-            json={"hub_id": 1, "switch": "A", "position": "STRAIGHT"}
+            "/switch", json={"hub_id": 1, "switch": "A", "position": "STRAIGHT"}
         )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -181,7 +177,7 @@ class TestSwitchControlEndpoints:
         response = client.post(
             "/switch",
             json={"hub_id": 1, "switch": "A", "position": "STRAIGHT"},
-            headers={"X-API-Key": test_api_key}
+            headers={"X-API-Key": test_api_key},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -196,7 +192,7 @@ class TestSwitchControlEndpoints:
             response = client.post(
                 "/switch",
                 json={"hub_id": 1, "switch": switch_name, "position": "STRAIGHT"},
-                headers={"X-API-Key": test_api_key}
+                headers={"X-API-Key": test_api_key},
             )
             assert response.status_code == status.HTTP_200_OK
 
@@ -206,7 +202,7 @@ class TestSwitchControlEndpoints:
         response = client.post(
             "/switch",
             json={"hub_id": 1, "switch": "A", "position": "STRAIGHT"},
-            headers={"X-API-Key": test_api_key}
+            headers={"X-API-Key": test_api_key},
         )
         assert response.status_code == status.HTTP_200_OK
 
@@ -214,7 +210,7 @@ class TestSwitchControlEndpoints:
         response = client.post(
             "/switch",
             json={"hub_id": 1, "switch": "A", "position": "DIVERGING"},
-            headers={"X-API-Key": test_api_key}
+            headers={"X-API-Key": test_api_key},
         )
         assert response.status_code == status.HTTP_200_OK
 
@@ -223,7 +219,7 @@ class TestSwitchControlEndpoints:
         response = client.post(
             "/switch",
             json={"hub_id": 1, "switch": "E", "position": "STRAIGHT"},
-            headers={"X-API-Key": test_api_key}
+            headers={"X-API-Key": test_api_key},
         )
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -233,7 +229,7 @@ class TestSwitchControlEndpoints:
         response = client.post(
             "/switch",
             json={"hub_id": 1, "switch": "A", "position": "INVALID"},
-            headers={"X-API-Key": test_api_key}
+            headers={"X-API-Key": test_api_key},
         )
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -243,7 +239,7 @@ class TestSwitchControlEndpoints:
         response = client.post(
             "/switch",
             json={"hub_id": 1, "switch": "a", "position": "straight"},
-            headers={"X-API-Key": test_api_key}
+            headers={"X-API-Key": test_api_key},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -262,14 +258,15 @@ class TestDeviceStatusEndpoints:
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_connected_trains_with_auth(self, client, test_api_key, sample_train_status, mock_lego_controller):
+    def test_connected_trains_with_auth(
+        self, client, test_api_key, sample_train_status, mock_lego_controller
+    ):
         """Test connected trains endpoint returns train data."""
-        mock_lego_controller.train_controller.get_connected_trains.return_value = sample_train_status
-
-        response = client.get(
-            "/connected/trains",
-            headers={"X-API-Key": test_api_key}
+        mock_lego_controller.train_controller.get_connected_trains.return_value = (
+            sample_train_status
         )
+
+        response = client.get("/connected/trains", headers={"X-API-Key": test_api_key})
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -280,10 +277,7 @@ class TestDeviceStatusEndpoints:
 
     def test_connected_trains_empty(self, client, test_api_key):
         """Test connected trains endpoint with no trains."""
-        response = client.get(
-            "/connected/trains",
-            headers={"X-API-Key": test_api_key}
-        )
+        response = client.get("/connected/trains", headers={"X-API-Key": test_api_key})
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -296,13 +290,16 @@ class TestDeviceStatusEndpoints:
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_connected_switches_with_auth(self, client, test_api_key, sample_switch_status, mock_lego_controller):
+    def test_connected_switches_with_auth(
+        self, client, test_api_key, sample_switch_status, mock_lego_controller
+    ):
         """Test connected switches endpoint returns switch data."""
-        mock_lego_controller.switch_controller.get_connected_switches.return_value = sample_switch_status
+        mock_lego_controller.switch_controller.get_connected_switches.return_value = (
+            sample_switch_status
+        )
 
         response = client.get(
-            "/connected/switches",
-            headers={"X-API-Key": test_api_key}
+            "/connected/switches", headers={"X-API-Key": test_api_key}
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -323,10 +320,7 @@ class TestSystemControlEndpoints:
 
     def test_reset_with_auth(self, client, test_api_key):
         """Test reset endpoint with valid authentication."""
-        response = client.post(
-            "/reset",
-            headers={"X-API-Key": test_api_key}
-        )
+        response = client.post("/reset", headers={"X-API-Key": test_api_key})
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -344,8 +338,8 @@ class TestCORSHeaders:
             "/health",
             headers={
                 "Origin": "http://localhost:8080",
-                "Access-Control-Request-Method": "GET"
-            }
+                "Access-Control-Request-Method": "GET",
+            },
         )
 
         # Should allow the request
@@ -353,10 +347,7 @@ class TestCORSHeaders:
 
     def test_cors_headers_present(self, client):
         """Test CORS headers are present in responses."""
-        response = client.get(
-            "/health",
-            headers={"Origin": "http://localhost:8080"}
-        )
+        response = client.get("/health", headers={"Origin": "http://localhost:8080"})
 
         # Check for CORS headers (if properly configured)
         # FastAPI/Starlette adds these automatically

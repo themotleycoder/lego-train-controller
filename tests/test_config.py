@@ -3,6 +3,7 @@ Unit tests for configuration module.
 
 Tests Settings class and environment variable loading.
 """
+
 import os
 from typing import List
 
@@ -24,7 +25,7 @@ class TestSettings:
             require_auth=True,
             log_level="INFO",
             log_format="json",
-            bluetooth_reset_on_startup=True
+            bluetooth_reset_on_startup=True,
         )
 
         assert settings.host == "0.0.0.0"
@@ -118,7 +119,7 @@ class TestSettings:
             status_update_interval=0.2,
             inactive_device_threshold=10.0,
             command_retry_delay=1.0,
-            max_command_retries=5
+            max_command_retries=5,
         )
 
         assert settings.status_update_interval == 0.2

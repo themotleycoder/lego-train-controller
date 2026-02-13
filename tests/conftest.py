@@ -3,6 +3,7 @@ Pytest configuration and shared fixtures for LEGO Train Controller tests.
 
 This module provides common fixtures and configuration for all test modules.
 """
+
 import asyncio
 import os
 from typing import AsyncGenerator, Generator
@@ -72,8 +73,12 @@ def mock_lego_controller():
 
         # Mock switch controller
         mock_instance.switch_controller = MagicMock()
-        mock_instance.switch_controller.send_command_with_retry = AsyncMock(return_value=True)
-        mock_instance.switch_controller.get_connected_switches = MagicMock(return_value={})
+        mock_instance.switch_controller.send_command_with_retry = AsyncMock(
+            return_value=True
+        )
+        mock_instance.switch_controller.get_connected_switches = MagicMock(
+            return_value={}
+        )
         mock_instance.switch_controller.start_status_monitoring = AsyncMock()
         mock_instance.switch_controller.scanner = MagicMock()
         mock_instance.switch_controller.scanner.reset_bluetooth = AsyncMock()
@@ -105,8 +110,7 @@ async def async_client(mock_lego_controller) -> AsyncGenerator:
     from webservice.train_service import app
 
     async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test"
+        transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
         yield ac
 
@@ -124,7 +128,7 @@ def sample_train_status():
             "last_update_seconds_ago": 0.5,
             "rssi": -60,
             "channel": 21,
-            "active": True
+            "active": True,
         },
         22: {
             "status": "stopped",
@@ -135,8 +139,8 @@ def sample_train_status():
             "last_update_seconds_ago": 1.2,
             "rssi": -55,
             "channel": 22,
-            "active": False
-        }
+            "active": False,
+        },
     }
 
 
@@ -149,19 +153,19 @@ def sample_switch_status():
                 "SWITCH_A": 0,  # STRAIGHT
                 "SWITCH_B": 1,  # DIVERGING
                 "SWITCH_C": 0,
-                "SWITCH_D": 1
+                "SWITCH_D": 1,
             },
             "switch_states": {
                 "SWITCH_A": 1,  # Connected
                 "SWITCH_B": 1,
                 "SWITCH_C": 0,  # Disconnected
-                "SWITCH_D": 1
+                "SWITCH_D": 1,
             },
             "last_update_seconds_ago": 0.8,
             "name": "Technic Hub",
             "status": 5,
             "connected": True,
             "rssi": -58,
-            "reliability": {}
+            "reliability": {},
         }
     }

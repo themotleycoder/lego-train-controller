@@ -5,6 +5,7 @@ LEGO Train Controller REST API Service.
 Provides HTTP endpoints for controlling LEGO trains and switches via Bluetooth.
 Implements security, logging, and health monitoring.
 """
+
 import asyncio
 import logging
 import time
@@ -39,7 +40,7 @@ app = FastAPI(
     description="REST API for controlling LEGO Powered Up trains and switches via Bluetooth",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # Add rate limiter to app state and register exception handler
@@ -78,8 +79,8 @@ async def log_requests(request: Request, call_next):
             "request_id": request_id,
             "method": request.method,
             "path": request.url.path,
-            "client": request.client.host if request.client else "unknown"
-        }
+            "client": request.client.host if request.client else "unknown",
+        },
     )
 
     response = await call_next(request)
@@ -92,8 +93,8 @@ async def log_requests(request: Request, call_next):
             "method": request.method,
             "path": request.url.path,
             "status_code": response.status_code,
-            "duration_ms": round(duration * 1000, 2)
-        }
+            "duration_ms": round(duration * 1000, 2),
+        },
     )
 
     return response
@@ -133,40 +134,37 @@ async def shutdown_event():
     except Exception as e:
         logger.error(f"Error during shutdown: {e}", exc_info=True)
 
+
 # ===========================================
 # Pydantic Models with Validation
 # ===========================================
 
+
 class TrainPowerCommand(BaseModel):
     """Command to control train motor power."""
+
     hub_id: int = Field(..., ge=0, description="Hub ID of the train")
     power: int = Field(..., ge=-100, le=100, description="Motor power from -100 to 100")
 
     class Config:
-        json_schema_extra = {
-            "example": {
-                "hub_id": 12,
-                "power": 50
-            }
-        }
+        json_schema_extra = {"example": {"hub_id": 12, "power": 50}}
 
 
 class TrainDriveCommand(BaseModel):
     """Command to toggle train self-drive mode."""
+
     hub_id: int = Field(..., ge=0, description="Hub ID of the train")
-    self_drive: int = Field(..., ge=0, le=1, description="Self-drive mode: 1=enabled, 0=disabled")
+    self_drive: int = Field(
+        ..., ge=0, le=1, description="Self-drive mode: 1=enabled, 0=disabled"
+    )
 
     class Config:
-        json_schema_extra = {
-            "example": {
-                "hub_id": 12,
-                "self_drive": 1
-            }
-        }
+        json_schema_extra = {"example": {"hub_id": 12, "self_drive": 1}}
 
 
 class SwitchCommand(BaseModel):
     """Command to control track switch position."""
+
     hub_id: int = Field(..., ge=0, description="Hub ID of the switch controller")
     switch: str = Field(..., description="Switch name (A, B, C, or D)")
     position: str = Field(..., description="Switch position (STRAIGHT or DIVERGING)")
@@ -175,46 +173,51 @@ class SwitchCommand(BaseModel):
     def validate_switch_name(cls, v):
         """Validate switch name is A-D."""
         if v.upper() not in settings.valid_switch_names_list:
-            raise ValueError(f"Switch must be one of {settings.valid_switch_names_list}")
+            raise ValueError(
+                f"Switch must be one of {settings.valid_switch_names_list}"
+            )
         return v.upper()
 
     @validator("position")
     def validate_position(cls, v):
         """Validate position is STRAIGHT or DIVERGING."""
         if v.upper() not in settings.valid_switch_positions_list:
-            raise ValueError(f"Position must be one of {settings.valid_switch_positions_list}")
+            raise ValueError(
+                f"Position must be one of {settings.valid_switch_positions_list}"
+            )
         return v.upper()
 
     class Config:
         json_schema_extra = {
-            "example": {
-                "hub_id": 1,
-                "switch": "A",
-                "position": "DIVERGING"
-            }
+            "example": {"hub_id": 1, "switch": "A", "position": "DIVERGING"}
         }
 
 
 class HealthResponse(BaseModel):
     """Health check response model."""
+
     status: str = Field(..., description="Service status (healthy/degraded/unhealthy)")
     timestamp: float = Field(..., description="Current Unix timestamp")
     version: str = Field(..., description="API version")
     bluetooth_available: bool = Field(..., description="Bluetooth adapter availability")
     connected_trains: int = Field(..., description="Number of connected trains")
     connected_switches: int = Field(..., description="Number of connected switches")
-    authentication_enabled: bool = Field(..., description="Whether API key auth is enabled")    
+    authentication_enabled: bool = Field(
+        ..., description="Whether API key auth is enabled"
+    )
+
 
 # ===========================================
 # Health Check Endpoint (No auth required)
 # ===========================================
+
 
 @app.get(
     "/health",
     response_model=HealthResponse,
     tags=["Monitoring"],
     summary="Health check endpoint",
-    description="Check service health and availability. No authentication required."
+    description="Check service health and availability. No authentication required.",
 )
 @limiter.limit("100/minute")
 async def health_check(request: Request):
@@ -229,10 +232,9 @@ async def health_check(request: Request):
         bluetooth_available = True
         try:
             import subprocess
+
             result = subprocess.run(
-                ["hciconfig", "hci0"],
-                capture_output=True,
-                timeout=2
+                ["hciconfig", "hci0"], capture_output=True, timeout=2
             )
             bluetooth_available = result.returncode == 0
         except Exception as e:
@@ -258,18 +260,14 @@ async def health_check(request: Request):
             bluetooth_available=bluetooth_available,
             connected_trains=connected_trains,
             connected_switches=connected_switches,
-            authentication_enabled=settings.require_auth
+            authentication_enabled=settings.require_auth,
         )
 
     except Exception as e:
         logger.error(f"Health check failed: {e}", exc_info=True)
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={
-                "status": "unhealthy",
-                "timestamp": time.time(),
-                "error": str(e)
-            }
+            content={"status": "unhealthy", "timestamp": time.time(), "error": str(e)},
         )
 
 
@@ -277,17 +275,16 @@ async def health_check(request: Request):
 # Train Control Endpoints (Auth required)
 # ===========================================
 
+
 @app.post(
     "/selfdrive",
     tags=["Train Control"],
     summary="Toggle train self-drive mode",
-    description="Enable or disable autonomous self-drive mode for a train"
+    description="Enable or disable autonomous self-drive mode for a train",
 )
 @limiter.limit("30/minute")
 async def control_train_drive(
-    request: Request,
-    command: TrainDriveCommand,
-    api_key: str = Depends(api_key_header)
+    request: Request, command: TrainDriveCommand, api_key: str = Depends(api_key_header)
 ):
     """Toggle train self-drive mode."""
     await verify_api_key(api_key)
@@ -297,11 +294,14 @@ async def control_train_drive(
             f"Self-drive command received: hub_id={command.hub_id}, self_drive={command.self_drive}"
         )
         await controller.train_controller.handle_drive_command(
-            command.hub_id,
-            command.self_drive
+            command.hub_id, command.self_drive
         )
         logger.info(f"Self-drive command successful for train {command.hub_id}")
-        return {"status": "success", "hub_id": command.hub_id, "self_drive": command.self_drive}
+        return {
+            "status": "success",
+            "hub_id": command.hub_id,
+            "self_drive": command.self_drive,
+        }
 
     except ValueError as e:
         logger.warning(f"Invalid self-drive command: {e}")
@@ -310,23 +310,24 @@ async def control_train_drive(
         logger.error(f"Self-drive command failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post(
     "/train",
     tags=["Train Control"],
     summary="Control train power",
-    description="Set the motor power for a train (-100 to 100)"
+    description="Set the motor power for a train (-100 to 100)",
 )
 @limiter.limit("30/minute")
 async def control_train_power(
-    request: Request,
-    command: TrainPowerCommand,
-    api_key: str = Depends(api_key_header)
+    request: Request, command: TrainPowerCommand, api_key: str = Depends(api_key_header)
 ):
     """Control train motor power."""
     await verify_api_key(api_key)
 
     try:
-        logger.info(f"Power command received: hub_id={command.hub_id}, power={command.power}")
+        logger.info(
+            f"Power command received: hub_id={command.hub_id}, power={command.power}"
+        )
         await controller.train_controller.handle_command(command.hub_id, command.power)
         logger.info(f"Power command successful for train {command.hub_id}")
         return {"status": "success", "hub_id": command.hub_id, "power": command.power}
@@ -337,22 +338,22 @@ async def control_train_power(
     except Exception as e:
         logger.error(f"Power command failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 # ===========================================
 # Switch Control Endpoints (Auth required)
 # ===========================================
+
 
 @app.post(
     "/switch",
     tags=["Switch Control"],
     summary="Control track switch",
-    description="Set the position of a track switch (STRAIGHT or DIVERGING)"
+    description="Set the position of a track switch (STRAIGHT or DIVERGING)",
 )
 @limiter.limit("30/minute")
 async def control_switch(
-    request: Request,
-    command: SwitchCommand,
-    api_key: str = Depends(api_key_header)
+    request: Request, command: SwitchCommand, api_key: str = Depends(api_key_header)
 ):
     """Control track switch position."""
     await verify_api_key(api_key)
@@ -370,7 +371,7 @@ async def control_switch(
         success = await controller.switch_controller.send_command_with_retry(
             command.hub_id,
             f"SWITCH_{command.switch}",  # Keep the SWITCH_ prefix for compatibility
-            position
+            position,
         )
 
         if success:
@@ -381,13 +382,13 @@ async def control_switch(
                 "status": "success",
                 "hub_id": command.hub_id,
                 "switch": command.switch,
-                "position": command.position
+                "position": command.position,
             }
         else:
             logger.warning(f"Switch command failed after retries: {command.switch}")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Failed to control switch after multiple attempts"
+                detail="Failed to control switch after multiple attempts",
             )
 
     except ValueError as e:
@@ -397,18 +398,22 @@ async def control_switch(
         logger.error(f"Switch command failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+
 # ===========================================
 # Device Status Endpoints (Auth required)
 # ===========================================
+
 
 @app.get(
     "/connected/trains",
     tags=["Device Status"],
     summary="Get connected trains",
-    description="Retrieve status information for all connected train hubs"
+    description="Retrieve status information for all connected train hubs",
 )
 @limiter.limit("200/minute")
-async def get_connected_trains(request: Request, api_key: str = Depends(api_key_header)):
+async def get_connected_trains(
+    request: Request, api_key: str = Depends(api_key_header)
+):
     """Get information about all connected train hubs."""
     await verify_api_key(api_key)
 
@@ -417,8 +422,7 @@ async def get_connected_trains(request: Request, api_key: str = Depends(api_key_
         if not controller or not controller.train_controller:
             logger.error("Train controller not initialized")
             raise HTTPException(
-                status_code=503,
-                detail="Train controller not initialized"
+                status_code=503, detail="Train controller not initialized"
             )
 
         connected_trains = controller.train_controller.get_connected_trains()
@@ -427,26 +431,26 @@ async def get_connected_trains(request: Request, api_key: str = Depends(api_key_
         return {
             "connected_trains": len(connected_trains),
             "trains": connected_trains,
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error retrieving connected trains: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Internal server error: {str(e)}"
-        )
-    
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
 @app.get(
     "/connected/switches",
     tags=["Device Status"],
     summary="Get connected switches",
-    description="Retrieve status information for all connected switch hubs"
+    description="Retrieve status information for all connected switch hubs",
 )
 @limiter.limit("200/minute")
-async def get_connected_switches(request: Request, api_key: str = Depends(api_key_header)):
+async def get_connected_switches(
+    request: Request, api_key: str = Depends(api_key_header)
+):
     """
     Get information about all connected switch hubs.
 
@@ -463,22 +467,24 @@ async def get_connected_switches(request: Request, api_key: str = Depends(api_ke
         return {
             "connected_switches": len(connected_switches),
             "switches": connected_switches,
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
 
     except Exception as e:
         logger.error(f"Error retrieving connected switches: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+
 # ===========================================
 # System Control Endpoints (Auth required)
 # ===========================================
+
 
 @app.post(
     "/reset",
     tags=["System Control"],
     summary="Reset Bluetooth adapter",
-    description="Reset the Bluetooth adapter to clear connection issues"
+    description="Reset the Bluetooth adapter to clear connection issues",
 )
 @limiter.limit("10/minute")
 async def reset_bluetooth(request: Request, api_key: str = Depends(api_key_header)):
@@ -499,7 +505,7 @@ async def reset_bluetooth(request: Request, api_key: str = Depends(api_key_heade
         return {
             "status": "success",
             "message": "Bluetooth adapter reset successfully",
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
 
     except Exception as e:
@@ -511,16 +517,17 @@ async def reset_bluetooth(request: Request, api_key: str = Depends(api_key_heade
 # Exception Handlers
 # ===========================================
 
+
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     """Custom HTTP exception handler with logging."""
     logger.warning(
         f"HTTP {exc.status_code}: {exc.detail}",
-        extra={"path": request.url.path, "method": request.method}
+        extra={"path": request.url.path, "method": request.method},
     )
     return JSONResponse(
         status_code=exc.status_code,
-        content={"detail": exc.detail, "timestamp": time.time()}
+        content={"detail": exc.detail, "timestamp": time.time()},
     )
 
 
@@ -530,15 +537,15 @@ async def general_exception_handler(request: Request, exc: Exception):
     logger.error(
         f"Unhandled exception: {exc}",
         exc_info=True,
-        extra={"path": request.url.path, "method": request.method}
+        extra={"path": request.url.path, "method": request.method},
     )
     return JSONResponse(
         status_code=500,
         content={
             "detail": "Internal server error",
             "message": str(exc),
-            "timestamp": time.time()
-        }
+            "timestamp": time.time(),
+        },
     )
 
 
@@ -554,5 +561,5 @@ if __name__ == "__main__":
         app,
         host=settings.host,
         port=settings.port,
-        log_level=settings.log_level.lower()
+        log_level=settings.log_level.lower(),
     )

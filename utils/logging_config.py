@@ -4,6 +4,7 @@ Structured logging configuration for LEGO Train Controller.
 Provides JSON and text formatters with contextual information.
 Replaces print() statements throughout the codebase.
 """
+
 import logging
 import sys
 import json
@@ -86,7 +87,7 @@ class TextFormatter(logging.Formatter):
 def setup_logging(
     level: Optional[str] = None,
     log_format: Optional[str] = None,
-    log_file: Optional[str] = None
+    log_file: Optional[str] = None,
 ) -> logging.Logger:
     """
     Configure structured logging for the application.

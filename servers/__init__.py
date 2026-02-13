@@ -12,9 +12,9 @@ from .bluetooth_scanner import BetterBleScanner
 from .main import LegoController
 
 __all__ = [
-    'TRAIN_COMMAND',
-    'COMMAND_CHANNEL',
-    'LEGO_MANUFACTURER_IDS',
-    'BetterBleScanner',
-    'LegoController'
+    "TRAIN_COMMAND",
+    "COMMAND_CHANNEL",
+    "LEGO_MANUFACTURER_IDS",
+    "BetterBleScanner",
+    "LegoController",
 ]

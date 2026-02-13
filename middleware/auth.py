@@ -3,6 +3,7 @@ Authentication middleware for LEGO Train Controller API.
 
 Implements API key authentication with header-based validation.
 """
+
 import logging
 from typing import Optional
 from fastapi import HTTPException, Request, status

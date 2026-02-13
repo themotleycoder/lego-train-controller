@@ -7,12 +7,13 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+
 class BetterBleScanner:
     def __init__(self):
         self.scanner = None
         self._scanning = False
         self._lock = asyncio.Lock()  # Add lock for thread safety
-    
+
     async def start_scan(self, callback):
         """Start a new scan with forced cleanup"""
         async with self._lock:  # Use lock to prevent concurrent scans
@@ -21,7 +22,7 @@ class BetterBleScanner:
                     logger.info("Scanner already running, stopping first...")
                     await self.stop_scan()
                     await asyncio.sleep(1)  # Give time for cleanup
-                
+
                 logger.info("Resetting Bluetooth...")
                 await self.reset_bluetooth()
                 await asyncio.sleep(1)  # Wait for reset
@@ -32,13 +33,13 @@ class BetterBleScanner:
                 await self.scanner.start()
                 self._scanning = True
                 logger.info("Scanning started successfully")
-                
+
             except Exception as e:
                 logger.error(f"Error starting scan: {e}", exc_info=True)
                 self._scanning = False
                 self.scanner = None
                 raise
-    
+
     async def stop_scan(self):
         """Stop scanning with forced cleanup"""
         async with self._lock:
@@ -59,13 +60,13 @@ class BetterBleScanner:
         """Reset Bluetooth to a known state"""
         try:
             logger.info("Resetting Bluetooth...")
-            
+
             # Simple reset using bluetoothctl
             commands = [
                 ["sudo", "bluetoothctl", "power", "off"],
-                ["sudo", "bluetoothctl", "power", "on"]
+                ["sudo", "bluetoothctl", "power", "on"],
             ]
-            
+
             for cmd in commands:
                 try:
                     subprocess.run(cmd, check=True, capture_output=True)
@@ -73,7 +74,7 @@ class BetterBleScanner:
                 except subprocess.CalledProcessError as e:
                     logger.warning(f"Warning - command {cmd} failed: {e}")
                     continue
-                    
+
             logger.info("Bluetooth reset complete")
         except Exception as e:
             logger.error(f"Error during Bluetooth reset: {e}", exc_info=True)
